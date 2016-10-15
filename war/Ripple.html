@@ -8,6 +8,111 @@
   <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
 
+
+<script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+<script type="text/javascript" src="webgl-utils.js"></script>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+    varying vec4 vPosition;
+
+    uniform sampler2D uSampler;
+
+
+    void main(void) {
+        float alpha = 1.0;
+            vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+	float p =  textureColor.r*10.;
+        gl_FragColor = vec4(p > 0. ? p : 0., p < 0. ? -p : 0., textureColor.b, 1.);
+    }
+</script>
+
+<script id="shader-draw-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec4 vPosition;
+    uniform vec4 color;
+
+    void main(void) {
+        gl_FragColor = color;
+    }
+</script>
+
+<script id="shader-screen-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+    varying vec4 vPosition;
+    varying float vDamping;
+
+    uniform sampler2D uSampler;
+
+highp float getSquare(highp vec2 offset)
+{
+        highp vec2 x = offset+vTextureCoord;
+	highp vec4 pv = texture2D(uSampler, x);
+        if (pv.b == 0.0)
+                return pv.r;
+#ifdef ACOUSTIC
+        return texture2D(uSampler, vTextureCoord-offset).r;
+#else
+        return 0.0;
+#endif
+}
+
+void main()
+{
+        highp float x = 0.;
+    highp float newpos = 0.;
+     float stepSizeX = 1./1024.;
+     float stepSizeY = 1./1024.;
+        highp vec4 pv = texture2D(uSampler, vTextureCoord);
+        if (pv.b == 0.0) {
+                highp float p = pv.r;
+                highp float v = pv.g;
+                highp float mid1 = getSquare(vec2(stepSizeX, 0.));
+                highp float mid2 = getSquare(vec2(-stepSizeX, 0.));
+                highp float mid3 = getSquare(vec2(0., stepSizeY));
+                highp float mid4 = getSquare(vec2(0., -stepSizeY));
+                highp float mid = .25*(mid1+mid2+mid3+mid4);
+                highp float med = 1.-pv.b; // texture2D(s_medium, tcoordVarying).r;
+        //highp float med = .6;
+        //highp float med = .6;
+        // med = .6; // 1.5
+        //med *= 1.5; // 1.5;
+//med *= .9;
+med *= 1.5;
+                x = med*(mid-p)+v*vDamping; // was .3, could be .6, .15
+        newpos = p+x;
+        //              x = med*(mid-p)+v; // was .3, could be .6, .15
+        }
+        gl_FragColor = vec4(newpos, x, pv.b, 1.);
+}
+
+</script>
+
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec2 aTextureCoord;
+    attribute float aDamping;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec2 vTextureCoord;
+    varying vec4 vPosition;
+    varying float vDamping;
+
+
+    void main(void) {
+        vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+        gl_Position = uPMatrix * vPosition;
+        vTextureCoord = aTextureCoord;
+	vDamping = aDamping;
+    }
+</script>
     <!--                                                               -->
     <!-- Consider inlining CSS to reduce the number of requested files -->
     <!--                                                               -->
@@ -18,6 +123,8 @@
     <!--                                           -->
     <title>Web Application Starter Project</title>
     
+    <script type="text/javascript" language="javascript" src="ripple.js"></script>
+
     <!--                                           -->
     <!-- This script loads your compiled module.   -->
     <!-- If you add any GWT meta tags, they must   -->
@@ -40,20 +147,7 @@
         in order for this application to display correctly.
       </div>
     </noscript>
-
-    <h1>Web Application Starter Project</h1>
-
-    <table align="center">
-      <tr>
-        <td colspan="2" style="font-weight:bold;">Please enter your name:</td>        
-      </tr>
-      <tr>
-        <td id="nameFieldContainer"></td>
-        <td id="sendButtonContainer"></td>
-      </tr>
-      <tr>
-        <td colspan="2" style="color:red;" id="errorLabelContainer"></td>
-      </tr>
-    </table>
   </body>
 </html>
+
+
