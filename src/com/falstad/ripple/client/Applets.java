@@ -32,7 +32,7 @@ public class Applets implements EntryPoint {
 	 * This is the entry point method.
 	 */
 	public void onModuleLoad() {
-		
+
 		ripsim = new RippleSim();
 		ripsim.init();
 
@@ -42,7 +42,7 @@ public class Applets implements EntryPoint {
 	            {               
 	            	ripsim.setCanvasSize();
 //	            	ripsim.setiFrameHeight();
-	            	ripsim.init();
+//	            	ripsim.init();
 	            	
 	                	
 	            }

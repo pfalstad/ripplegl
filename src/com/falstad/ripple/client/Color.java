@@ -101,4 +101,6 @@ public class Color
                     Integer.valueOf( colorStr.substring( 5, 7 ), 16 ) );
     	}
     }
+    
+    public int toInteger() { return r<<16|g<<8|b; }
 }

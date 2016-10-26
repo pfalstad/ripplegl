@@ -70,8 +70,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	int windowOffsetY = 0;
 	int windowBottom = 0;
 	int windowRight = 0;
-	public static final int sourceRadius = 7;
-	public static final double freqMult = .0233333;
+	public static final int sourceRadius = 17;
+	public static final double freqMult = .0233333 * 5;
 
 	public String getAppletInfo() {
 		return "Ripple by Paul Falstad";
@@ -178,9 +178,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Context2d backcontext;
 	HandlerRegistration handler;
 	DialogBox dialogBox;
+	int verticalPanelWidth;
 
 	static final int MENUBARHEIGHT = 30;
-	static final int VERTICALPANELWIDTH = 166;
+	static final int MAXVERTICALPANELWIDTH = 166;
 	static final int POSTGRABSQ = 16;
 
 	final Timer timer = new Timer() {
@@ -189,7 +190,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			updateRipple();
 		}
 	};
-	final int FASTTIMER = 40;
+	final int FASTTIMER = 16;
 
 	int getrand(int x) {
 		int q = random.nextInt();
@@ -200,22 +201,37 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	public void setCanvasSize() {
 		int width, height;
-		width = (int) RootLayoutPanel.get().getOffsetWidth();
+		int fullwidth = width = (int) RootLayoutPanel.get().getOffsetWidth();
 		height = (int) RootLayoutPanel.get().getOffsetHeight();
 		height = height - MENUBARHEIGHT;
-		width = width - VERTICALPANELWIDTH;
+		width = width - MAXVERTICALPANELWIDTH;
+		width = height = (width < height) ? width : height;
+		winSize = new Dimension(width, height);
+		verticalPanelWidth = fullwidth-width;
+		if (layoutPanel != null)
+			layoutPanel.setWidgetSize(verticalPanel, verticalPanelWidth);
+		if (resBar != null) {
+			resBar.setWidth(verticalPanelWidth);
+			dampingBar.setWidth(verticalPanelWidth);
+			speedBar.setWidth(verticalPanelWidth);
+			freqBar.setWidth(verticalPanelWidth);
+			brightnessBar.setWidth(verticalPanelWidth);
+			auxBar.setWidth(verticalPanelWidth);
+		}
 		if (cv != null) {
 			cv.setWidth(width + "PX");
 			cv.setHeight(height + "PX");
 			cv.setCoordinateSpaceWidth(width);
 			cv.setCoordinateSpaceHeight(height);
 		}
+		/*
 		if (backcv != null) {
 			backcv.setWidth(width + "PX");
 			backcv.setHeight(height + "PX");
 			backcv.setCoordinateSpaceWidth(width);
 			backcv.setCoordinateSpaceHeight(height);
 		}
+		*/
 		int h = height / 5;
 		/*
 		 * if (h < 128 && winSize.height > 300) h = 128;
@@ -224,11 +240,56 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	}
 
+    public static native void console(String text)
+    /*-{
+	    console.log(text);
+	}-*/;
+
+	static native void passCanvas(CanvasElement cv) /*-{
+		$doc.passCanvas(cv, this);
+	}-*/;
+
+	static native void updateRippleGL(double bright) /*-{
+		this.updateRipple(bright);
+	}-*/;
+
+	static native void simulate() /*-{
+		this.simulate();
+	}-*/;
+
+	static native void setResolutionGL(int x, int y, int wx, int wy) /*-{
+		this.setResolution(x, y, wx, wy);
+	}-*/;
+	
+	static native void drawSource(int x, int y, double value) /*-{
+		this.drawSource(x, y, value);
+	}-*/;
+
+	static native void drawLineSource(int x1, int y1, int x2, int y2, double value) /*-{
+		this.drawLineSource(x1, y1, x2, y2, value);
+	}-*/;
+	
+	static native void doBlank() /*-{
+		this.doBlank();
+	}-*/;
+
+	static native void doBlankWalls() /*-{
+		this.doBlankWalls();
+	}-*/;
+
+	static native void setColors(int wallColor, int posColor, int negColor,
+			int zeroColor, int posMedColor, int negMedColor,
+			int medColor, int sourceColor) /*-{
+		this.setColors(wallColor, posColor, negColor, zeroColor, posMedColor, negMedColor,
+			medColor, sourceColor);
+	}-*/;
+
 	public void init() {
 
 //		logger.log(Level.SEVERE, "RAwr");
 		
 		cv = Canvas.createIfSupported();
+		passCanvas(cv.getCanvasElement());
 		if (cv == null) {
 			RootPanel
 					.get()
@@ -239,11 +300,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		sources = new OscSource[20];
 		cvcontext = cv.getContext2d();
-		backcv = Canvas.createIfSupported();
-		backcontext = backcv.getContext2d();
+//		backcv = Canvas.createIfSupported();
+//		backcontext = backcv.getContext2d();
+		setCanvasSize();
 		layoutPanel = new DockLayoutPanel(Unit.PX);
 		verticalPanel = new VerticalPanel();
-		setCanvasSize();
 		
 		setupList = new Vector();
 		Setup s = new SingleSourceSetup();
@@ -316,9 +377,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		int res = 110;
 		verticalPanel.add(new Label("Simulation Speed"));
-		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 8, 1, 1, 100));
+		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 8, 1, 1, 30));
 		verticalPanel.add(new Label("Resolution"));
-		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 5, 400));
+		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 5, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
 		verticalPanel.add(new Label("Damping"));
@@ -335,8 +396,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		auxLabel.setVisible(false);
 		auxBar.setVisible(false);
 		verticalPanel.add(new Label("http://www.falstad.com"));
+		resBar.setWidth(verticalPanelWidth);
+		dampingBar.setWidth(verticalPanelWidth);
+		speedBar.setWidth(verticalPanelWidth);
+		freqBar.setWidth(verticalPanelWidth);
+		brightnessBar.setWidth(verticalPanelWidth);
+		auxBar.setWidth(verticalPanelWidth);
 
-		layoutPanel.addEast(verticalPanel, VERTICALPANELWIDTH);
+		layoutPanel.addEast(verticalPanel, verticalPanelWidth);
 		layoutPanel.add(cv);
 		RootLayoutPanel.get().add(layoutPanel);
 
@@ -429,26 +496,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		medium[x + gw * y] = q;
 	}
 
-	void doBlank() {
-		int x, y;
-		// I set all the elements in the grid to 1e-10 instead of 0 because
-		// if I set them to zero, then the simulation slows down for a
-		// short time until the grid fills up again. Don't ask me why!
-		// I don't know. This showed up when I started using floats
-		// instead of doubles.
-		for (x = 0; x != gridSizeXY; x++)
-			func[x] = funci[x] = 1e-10f;
-	}
-
-	void doBlankWalls() {
-		int x, y;
-		for (x = 0; x != gridSizeXY; x++) {
-			walls[x] = false;
-			medium[x] = 0;
-		}
-		calcExceptions();
-	}
-
 	void doBorder() {
 		int x, y;
 		for (x = 0; x < gridSizeX; x++) {
@@ -499,10 +546,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	void handleResize() {
 		logger.log(Level.SEVERE, cv.getOffsetWidth() +"," + cv.getOffsetHeight());
-		Dimension d = winSize = new Dimension(cv.getOffsetWidth(),cv.getOffsetHeight());
-		if (winSize.width == 0)
-		    return;
-		pixels = null;
+//		Dimension d = winSize = new Dimension(cv.getOffsetWidth(),cv.getOffsetHeight());
+//		if (winSize.width == 0)
+//		    return;
+//		pixels = null;
 //		if (useBufferedImage) {
 //		    try {
 //		    	
@@ -535,6 +582,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		    	System.out.println("BufferedImage failed");
 //		    }
 //		}
+		/*
 		if (pixels == null) {
 //		    pixels = new int[d.width*d.height];
 //		    int i;
@@ -559,9 +607,29 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		    CanvasElement el = cvcontext.getCanvas().
 		   
 		}
+		*/
 	}
 	
 	public void updateRipple() {
+		if (cvcontext == null) {
+			if (stoppedCheck.getState())
+				return;
+			long time = System.currentTimeMillis();
+			int iterCount = speedBar.getValue();
+			int i;
+			for (i = 0; i != iterCount; i++) {
+				simulate();
+				doSources(.25);
+				// limit frame time
+				if (System.currentTimeMillis()-time > 100)
+					break;
+			}
+//			console("total time = " + (System.currentTimeMillis()-time));
+			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
+			updateRippleGL(brightMult);
+			return;
+		}
+		
 		Graphics realg = new Graphics(backcontext);
 //		realg.setColor(Color.black);
 		realg.setFont(new Font("sans-serif", 1, 12));
@@ -706,89 +774,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 						funci[gi] = b * scaleo + a * sinth;
 					}
 				}
-				t += tadd;
-				if (sourceCount > 0) {
-					double w = freqBar.getValue() * (t - freqTimeZero)
-							* freqMult;
-					double w2 = w;
-					boolean skip = false;
-					switch (auxFunction) {
-					case AUX_FREQ:
-						w2 = auxBar.getValue() * t * freqMult;
-						break;
-					case AUX_PHASE:
-						w2 = w + (auxBar.getValue() - 1) * (pi / 29);
-						break;
-					}
-					double v = 0;
-					double v2 = 0;
-					switch (sourceWaveform) {
-					case SWF_SIN:
-						v = Math.cos(w);
-						if (sourceCount >= (sourcePlane ? 4 : 2))
-							v2 = Math.cos(w2);
-						else if (sourceFreqCount == 2)
-							v = (v + Math.cos(w2)) * .5;
-						break;
-					case SWF_SQUARE:
-						w %= pi * 2;
-						v = (w < pi) ? 1 : -1;
-						break;
-					case SWF_PULSE: {
-						w %= pi * 2;
-						double pulselen = pi / 4;
-						double pulselen2 = freqBar.getValue() * .2;
-						if (pulselen2 < pulselen)
-							pulselen = pulselen2;
-						v = (w > pulselen) ? 0 : Math.sin(w * pi / pulselen);
-						if (w > pulselen * 2)
-							skip = true;
-					}
-						break;
-					}
-					for (j = 0; j != sourceCount; j++) {
-						if ((j % 2) == 0)
-							sources[j].v = (float) (v * setup.sourceStrength());
-						else
-							sources[j].v = (float) (v2 * setup.sourceStrength());
-					}
-					if (sourcePlane) {
-						if (!skip) {
-							for (j = 0; j != sourceCount / 2; j++) {
-								OscSource src1 = sources[j * 2];
-								OscSource src2 = sources[j * 2 + 1];
-								OscSource src3 = sources[j];
-								drawPlaneSource(src1.x, src1.y, src2.x, src2.y,
-										src3.v, w);
-							}
-						}
-					} else {
-						if (sourceMoving) {
-							int sy;
-							movingSourcePos += tadd * .02 * auxBar.getValue();
-							double wm = movingSourcePos;
-							int h = windowHeight - 3;
-							wm %= h * 2;
-							sy = (int) wm;
-							if (sy > h)
-								sy = 2 * h - sy;
-							sy += windowOffsetY + 1;
-							sources[0].y = sy;
-						}
-						for (i = 0; i != sourceCount; i++) {
-							OscSource src = sources[i];
-							func[src.x + gw * src.y] = src.v;
-							funci[src.x + gw * src.y] = 0;
-						}
-					}
-				}
 				setup.eachFrame();
 				steps++;
 				filterGrid();
 			}
 		}
 
-		brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 		if (view3dCheck.getState())
 			draw3dView();
 		else
@@ -837,6 +828,86 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		cvcontext.drawImage(backcontext.getCanvas(), 0.0, 0.0);
 	}
 
+	void doSources(double tadd) {
+		t += tadd;
+		if (sourceCount > 0) {
+			double w = freqBar.getValue() * (t - freqTimeZero)
+					* freqMult;
+			double w2 = w;
+			boolean skip = false;
+			switch (auxFunction) {
+			case AUX_FREQ:
+				w2 = auxBar.getValue() * t * freqMult;
+				break;
+			case AUX_PHASE:
+				w2 = w + (auxBar.getValue() - 1) * (pi / 29);
+				break;
+			}
+			double v = 0;
+			double v2 = 0;
+			switch (sourceWaveform) {
+			case SWF_SIN:
+				v = Math.cos(w);
+				if (sourceCount >= (sourcePlane ? 4 : 2))
+					v2 = Math.cos(w2);
+				else if (sourceFreqCount == 2)
+					v = (v + Math.cos(w2)) * .5;
+				break;
+			case SWF_SQUARE:
+				w %= pi * 2;
+				v = (w < pi) ? 1 : -1;
+				break;
+			case SWF_PULSE: {
+				w %= pi * 2;
+				double pulselen = pi / 4;
+				double pulselen2 = freqBar.getValue() * .2;
+				if (pulselen2 < pulselen)
+					pulselen = pulselen2;
+				v = (w > pulselen) ? 0 : Math.sin(w * pi / pulselen);
+				if (w > pulselen * 2)
+					skip = true;
+			}
+				break;
+			}
+			int j;
+			for (j = 0; j != sourceCount; j++) {
+				if ((j % 2) == 0)
+					sources[j].v = (float) (v * setup.sourceStrength());
+				else
+					sources[j].v = (float) (v2 * setup.sourceStrength());
+			}
+			if (sourcePlane) {
+				if (!skip) {
+					for (j = 0; j != sourceCount / 2; j++) {
+						OscSource src1 = sources[j * 2];
+						OscSource src2 = sources[j * 2 + 1];
+						OscSource src3 = sources[j];
+						drawLineSource(src1.x, src1.y, src2.x, src2.y,
+								src3.v); // , w);
+					}
+				}
+			} else {
+				if (sourceMoving) {
+					int sy;
+					movingSourcePos += tadd * .02 * auxBar.getValue();
+					double wm = movingSourcePos;
+					int h = windowHeight - 3;
+					wm %= h * 2;
+					sy = (int) wm;
+					if (sy > h)
+						sy = 2 * h - sy;
+					sy += windowOffsetY + 1;
+					sources[0].y = sy;
+				}
+				int i;
+				for (i = 0; i != sourceCount; i++) {
+					OscSource src = sources[i];
+					drawSource(src.x, src.y, src.v);
+				}
+			}
+		}
+	}
+	
 	// filter out high-frequency noise
 	int filterCount;
 
@@ -1413,6 +1484,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int sx = src.getScreenX();
 			int sy = src.getScreenY();
 			int r2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
+			console("source " + (sx-x) + " " + (sy-y) + " " + r2);
 			if (sourceRadius * sourceRadius > r2) {
 				selectedSource = i;
 				return;
@@ -1487,6 +1559,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		gridSizeY = windowHeight + windowOffsetY * 2;
 		windowBottom = windowOffsetY + windowHeight - 1;
 		windowRight = windowOffsetX + windowWidth - 1;
+		setResolutionGL(gridSizeX, gridSizeY, windowOffsetX, windowOffsetY);
+		console("res " + gridSizeX + " " + speedBar.getValue());
 	}
 
 	void setResolution(int x) {
@@ -1620,6 +1694,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		negMedColor = schemeColors[cn][5];
 		medColor = schemeColors[cn][6];
 		sourceColor = schemeColors[cn][7];
+		setColors(wallColor.toInteger(), posColor.toInteger(), negColor.toInteger(),
+				zeroColor.toInteger(), posMedColor.toInteger(), negMedColor.toInteger(),
+				  medColor.toInteger(), sourceColor.toInteger());
 	}
 
 	void addDefaultColorScheme() {
