@@ -13,19 +13,44 @@
 <script type="text/javascript" src="webgl-utils.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
+#define TS_COL_WALL 0
+#define TS_COL_POS 1
+#define TS_COL_NEG 2
+#define TS_COL_NEUTRAL 3
+#define TS_COL_POS_MED 4
+#define TS_COL_NEG_MED 5
+#define TS_COL_MED 6
+#define TS_COL_SOURCE 7
+#define TS_COL_SELECT 8
+#define TS_COL_COUNT  9
+
     precision mediump float;
 
     varying vec2 vTextureCoord;
     varying vec4 vPosition;
 
     uniform sampler2D uSampler;
-
+    uniform float brightness;
+    uniform lowp vec3 colors[TS_COL_COUNT];
 
     void main(void) {
         float alpha = 1.0;
             vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-	float p =  textureColor.r*10.;
-        gl_FragColor = vec4(p > 0. ? p : 0., p < 0. ? -p : 0., textureColor.b, 1.);
+	float med = 1.0; // textureColor.b;
+	vec3 col;
+	if (med == 0.0)
+		col = colors[TS_COL_WALL];
+	else {
+		float r =  textureColor.r*brightness;
+	        r = clamp(r, -1., 1.);
+                if (r > 0.0)
+                        col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
+                      mix(colors[TS_COL_POS_MED], colors[TS_COL_POS], med), r);
+                else
+                        col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
+                      mix(colors[TS_COL_NEG_MED], colors[TS_COL_NEG], med), -r);
+	}
+        gl_FragColor = vec4(col, 1.);
     }
 </script>
 
@@ -48,6 +73,8 @@
     varying float vDamping;
 
     uniform sampler2D uSampler;
+    uniform float stepSizeX;
+    uniform float stepSizeY;
 
 highp float getSquare(highp vec2 offset)
 {
@@ -66,8 +93,6 @@ void main()
 {
         highp float x = 0.;
     highp float newpos = 0.;
-     float stepSizeX = 1./1024.;
-     float stepSizeY = 1./1024.;
         highp vec4 pv = texture2D(uSampler, vTextureCoord);
         if (pv.b == 0.0) {
                 highp float p = pv.r;
