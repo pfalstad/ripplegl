@@ -36,7 +36,7 @@
     void main(void) {
         float alpha = 1.0;
             vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-	float med = 1.0; // textureColor.b;
+	float med = 1.0-textureColor.b;
 	vec3 col;
 	if (med == 0.0)
 		col = colors[TS_COL_WALL];

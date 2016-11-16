@@ -1,11 +1,8 @@
 
-document.woof = function woof() { 
-	console.log("woof was called");
-}
-
 var gl;
 var canvas;
 var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
+var windowWidth, windowHeight;
 
     function getShader(gl, id) {
         var shaderScript = document.getElementById(id);
@@ -357,8 +354,8 @@ var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
         gl.uniform4f(shaderProgramDraw.colorUniform, f, 0.0, 0.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        srcCoords[0] = srcCoords[2] = -1+2*x/gridSizeX;
-        srcCoords[1] = +1-2*y/gridSizeY;
+        srcCoords[0] = srcCoords[2] = -1+2*(x+.5)/gridSizeX;
+        srcCoords[1] = +1-2*(y+.5)/gridSizeY;
         srcCoords[3] = srcCoords[1]+2/gridSizeY;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -372,15 +369,38 @@ var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
         //mvPopMatrix();
     }
 
+    function drawHandle(x, y) {
+        gl.useProgram(shaderProgramDraw);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 1, 1.0, 1.0, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var cx = -1+2*(x+.5)/windowWidth;
+        var cy = +1-2*(y+.5)/windowHeight;
+        var ox = .01;
+        var oy = .01;
+        var coords = [ cx-ox, cy-oy, cx+ox, cy-oy, cx+ox, cy+oy, cx-ox, cy+oy ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        setMatrixUniforms(shaderProgramDraw);
+//        gl.lineWidth(3);
+        gl.drawArrays(gl.LINE_LOOP, 0, 4);
+
+        //mvPopMatrix();
+    }
+
     function drawLineSource(x, y, x2, y2, f) {
         gl.useProgram(shaderProgramDraw);
         gl.uniform4f(shaderProgramDraw.colorUniform, f, 0.0, 0.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-	srcCoords[0] = -1+2*x/gridSizeX;
-	srcCoords[1] = +1-2*y/gridSizeY;
-	srcCoords[2] = -1+2*x2/gridSizeX;
-	srcCoords[3] = +1-2*y2/gridSizeY;
+        srcCoords[0] = -1+2*(x +.5)/gridSizeX;
+        srcCoords[1] = +1-2*(y +.5)/gridSizeY;
+        srcCoords[2] = -1+2*(x2+.5)/gridSizeX;
+        srcCoords[3] = +1-2*(y2+.5)/gridSizeY;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -393,6 +413,33 @@ var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
         //mvPopMatrix();
     }
 
+    function drawWall(x, y, x2, y2) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shaderProgramDraw);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 1.0, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        srcCoords[0] = -1+2*(x +.5)/gridSizeX;
+        srcCoords[1] = +1-2*(y +.5)/gridSizeY;
+        srcCoords[2] = -1+2*(x2+.5)/gridSizeX;
+        srcCoords[3] = +1-2*(y2+.5)/gridSizeY;
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.drawArrays(gl.LINES, 0, 2);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
 
     var laptopAngle = 0;
 
@@ -480,15 +527,19 @@ var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
     		gridSizeY = y;
     		windowOffsetX = wx;
     		windowOffsetY = wy;
+    		windowWidth  = gridSizeX-windowOffsetX*2;
+    		windowHeight = gridSizeY-windowOffsetY*2;
     		deleteRenderTexture(renderTexture1);
     		deleteRenderTexture(renderTexture2);
     		renderTexture2 = initTextureFramebuffer();
     		renderTexture1 = initTextureFramebuffer();
     		initBuffers();
-    		console.log("set resolution " + gridSizeX + " " + windowOffsetX);
+    		console.log("set resolution " + gridSizeX + " " + windowOffsetX + " " + windowWidth + " " + windowHeight);
     	}
     	sim.drawSource = function (x, y, f) { drawSource(x, y, f); }
     	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
+    	sim.drawHandle = function (x, y) { drawHandle(x, y); }
+    	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2); }
     	sim.doBlank = function () {
     		var rttFramebuffer = renderTexture1.framebuffer;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);

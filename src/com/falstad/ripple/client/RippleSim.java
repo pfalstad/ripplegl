@@ -4,6 +4,7 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.gargoylesoftware.htmlunit.javascript.host.Console;
 import com.gargoylesoftware.htmlunit.javascript.host.Navigator;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.CanvasPixelArray;
@@ -89,7 +90,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Choice sourceChooser;
 	Choice setupChooser;
 	Choice colorChooser;
-	Vector setupList;
+	Vector<Setup> setupList;
+	Vector<DragObject> dragObjects;
+	DragObject selectedObject;
+	DragHandle draggingHandle;
 	Setup setup;
 	Scrollbar dampingBar;
 	Scrollbar speedBar;
@@ -123,6 +127,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	boolean dragSet;
 	public boolean useFrame;
 	boolean showControls;
+	boolean changedWalls;
 	double t;
 	// MemoryImageSource imageSource;
 	CanvasPixelArray pixels;
@@ -179,6 +184,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	HandlerRegistration handler;
 	DialogBox dialogBox;
 	int verticalPanelWidth;
+	static RippleSim theSim;
 
 	static final int MENUBARHEIGHT = 30;
 	static final int MAXVERTICALPANELWIDTH = 166;
@@ -265,10 +271,18 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawSource(x, y, value);
 	}-*/;
 
+	static native void drawHandle(int x, int y) /*-{
+		this.drawHandle(x, y);
+	}-*/;
+
 	static native void drawLineSource(int x1, int y1, int x2, int y2, double value) /*-{
 		this.drawLineSource(x1, y1, x2, y2, value);
 	}-*/;
 	
+	static native void drawWall(int x1, int y1, int x2, int y2) /*-{
+		this.drawWall(x1, y1, x2, y2);
+	}-*/;
+
 	static native void doBlank() /*-{
 		this.doBlank();
 	}-*/;
@@ -285,7 +299,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}-*/;
 
 	public void init() {
-
+		theSim = this;
 //		logger.log(Level.SEVERE, "RAwr");
 		
 		cv = Canvas.createIfSupported();
@@ -299,6 +313,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 
 		sources = new OscSource[20];
+		dragObjects = new Vector<DragObject>();
 		cvcontext = cv.getContext2d();
 //		backcv = Canvas.createIfSupported();
 //		backcontext = backcv.getContext2d();
@@ -306,7 +321,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		layoutPanel = new DockLayoutPanel(Unit.PX);
 		verticalPanel = new VerticalPanel();
 		
-		setupList = new Vector();
+		setupList = new Vector<Setup>();
 		Setup s = new SingleSourceSetup();
 		while (s != null) {
 		    setupList.addElement(s);
@@ -427,7 +442,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setDamping();
 		setup = (Setup) setupList.elementAt(setupChooser.getSelectedIndex());
 		
-//		cv.addMouseMoveHandler(this);
+		cv.addMouseMoveHandler(this);
 		cv.addMouseDownHandler(this);
 		cv.addMouseOutHandler(this);
 		cv.addMouseUpHandler(this);
@@ -610,8 +625,19 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		*/
 	}
 	
+	void drawWalls() {
+		doBlankWalls();
+		int i;
+		for (i = 0; i != dragObjects.size(); i++)
+			dragObjects.get(i).prepare();
+	}
+	
 	public void updateRipple() {
 		if (cvcontext == null) {
+			if (changedWalls) {
+				drawWalls();
+				changedWalls = false;
+			}
 			if (stoppedCheck.getState())
 				return;
 			long time = System.currentTimeMillis();
@@ -627,6 +653,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //			console("total time = " + (System.currentTimeMillis()-time));
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult);
+			for (i = 0; i != dragObjects.size(); i++)
+				dragObjects.get(i).draw();
 			return;
 		}
 		
@@ -1410,6 +1438,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			}
 			return;
 		}
+		/*
 		if (dragX == x && dragY == y)
 			editFuncPoint(x, y);
 		else {
@@ -1443,6 +1472,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				}
 			}
 		}
+		*/
 	}
 
 	void editFuncPoint(int x, int y) {
@@ -1484,7 +1514,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int sx = src.getScreenX();
 			int sy = src.getScreenY();
 			int r2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
-			console("source " + (sx-x) + " " + (sy-y) + " " + r2);
 			if (sourceRadius * sourceRadius > r2) {
 				selectedSource = i;
 				return;
@@ -1569,6 +1598,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		// reinit();
 	}
 
+	/*
 	public void mouseDragged(MouseEvent e) {
 		if (view3dCheck.getState()) {
 			view3dDrag(e);
@@ -1580,21 +1610,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		adjustResolution = false;
 		// cv.repaint(0);
 	}
-
-	public void mouseMoved(MouseEvent e) {
-		if (dragging)
-			return;
-		int x = e.getX();
-		int y = e.getY();
-		dragStartX = dragX = x;
-		dragStartY = dragY = y;
-		viewAngleDragStart = viewAngle;
-		viewHeightDragStart = viewHeight;
-		selectSource(e);
-		// if (stoppedCheck.getState())
-		// cv.repaint(0);
-	}
-
+*/
+	
 	void view3dDrag(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
@@ -4380,18 +4397,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	public void onMouseUp(MouseUpEvent event) {
 //		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
 //		    return;
-		if(dragging){
-			handler.removeHandler();
-		}
 		dragging = false;
 		dragSet = dragClear = false;
-		
 	}
 
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
-		if (dragging)
+		if (dragging) {
+			dragMouse(event);
 			return;
+		}
 		int x = event.getX();
 		int y = event.getY();
 		dragStartX = dragX = x;
@@ -4399,6 +4414,48 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		viewAngleDragStart = viewAngle;
 		viewHeightDragStart = viewHeight;
 		selectSource(event);
+	}
+
+	void dragMouse(MouseMoveEvent event) {
+		if (view3dCheck.getState()) {
+			view3dDrag(event);
+		}
+		if (!dragging)
+			selectSource(event);
+		dragging = true;
+		edit(event);
+		adjustResolution = false;
+
+		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
+		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
+		if (draggingHandle != null) {
+			draggingHandle.dragTo(xp, yp);
+			changedWalls = true;
+		} else if (selectedObject != null) {
+			int dxp = dragX*windowWidth/winSize.width + windowOffsetX;
+			int dyp = dragY*windowHeight/winSize.height + windowOffsetY;
+			console("drag " + xp + " " + yp + " " + dxp + " " + dyp);
+			if (dxp != xp || dyp != yp) {
+				selectedObject.drag(xp-dxp, yp-dyp);
+				dragX = event.getX();
+				dragY = event.getY();
+				changedWalls = true;
+			}
+		}
+	}
+	
+	public void mouseMoved(MouseEvent e) {
+		if (dragging)
+			return;
+		int x = e.getX();
+		int y = e.getY();
+		dragStartX = dragX = x;
+		dragStartY = dragY = y;
+		viewAngleDragStart = viewAngle;
+		viewHeightDragStart = viewHeight;
+		selectSource(e);
+		// if (stoppedCheck.getState())
+		// cv.repaint(0);
 	}
 
 	@Override
@@ -4409,6 +4466,46 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		    return;
 		dragging = true;
 		edit(event);
+		
+		double minf = 9 * windowWidth/winSize.height;
+		double bestf = minf;
+		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
+		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
+		draggingHandle = null;
+		if (selectedObject != null) {
+			int i;
+			for (i = 0; i != selectedObject.handles.size(); i++) {
+				DragHandle dh = selectedObject.handles.get(i);
+				double r = DragObject.hypotf(xp-dh.x, yp-dh.y);
+				if (r < bestf) {
+					draggingHandle = dh;
+					bestf = r;
+				}
+			}
+			if (draggingHandle != null)
+				return;
+		}
+		
+		DragObject sel = null;
+		int i;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			double ht = obj.hitTest(xp, yp);
+			
+	        // if there are no better options, select a RectDragObject if we're tapping
+	        // inside it.  But allow TM_POKE to work inside hollow objects.
+			// XXX (not implemented)
+			
+			// find best match
+			if (ht < bestf) {
+				sel = obj;
+				bestf = ht;
+			}
+		}
+		boolean clearingSelection = (selectedObject != null && sel == null);
+		setSelectedObject(sel);
+		
+		/*
 		handler = cv.addMouseMoveHandler(new MouseMoveHandler(){
             public void onMouseMove(MouseMoveEvent e) {
             	if (view3dCheck.getState()) {
@@ -4421,6 +4518,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
             	adjustResolution = false;
             }
       });
+      */
+	}
+	
+	void setSelectedObject(DragObject obj) {
+		if (obj == selectedObject)
+			return;
+		if (selectedObject != null)
+			selectedObject.deselect();
+		selectedObject = obj;
+		if (obj != null)
+			selectedObject.select();
 	}
 	
 	@Override
@@ -4453,6 +4561,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	}
 
+	void doCreateWall() {
+		console("docreatewall");
+		Wall w = new Wall();
+		w.setInitialPosition();
+		dragObjects.add(w);
+	}
+	
+	Rectangle findSpace(DragObject obj, int sx, int sy) {
+		return new Rectangle(gridSizeX/2, gridSizeY/2, 20, 1);
+	}
+	
 	@Override
 	public void onClick(ClickEvent event) {
 		if (event.getSource() == blankButton) {
@@ -4460,7 +4579,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		} else if (event.getSource() == blankWallsButton) {
 			doBlankWalls();
 		} else if (event.getSource() == borderButton) {
-			doBorder();
+			doCreateWall();
+//			doBorder();
 		} else if (event.getSource() == exportButton) {
 			 doImport();
 		}
