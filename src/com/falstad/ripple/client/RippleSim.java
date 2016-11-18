@@ -46,6 +46,9 @@ import com.google.gwt.user.client.ui.Frame;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MenuBar;
+import com.google.gwt.user.client.ui.MenuItem;
+import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.RootLayoutPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.TextArea;
@@ -82,6 +85,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Button blankButton;
 	Button blankWallsButton;
 	Button borderButton;
+	Button boxButton;
 	Button exportButton;
 	Checkbox stoppedCheck;
 	Checkbox fixedEndsCheck;
@@ -140,6 +144,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	int sourceWaveform = SWF_SIN;
 	int auxFunction;
 	long startTime;
+	MenuBar mainMenuBar;
+	MenuBar elmMenuBar;
+    MenuItem elmEditMenuItem;
+    MenuItem elmDeleteMenuItem;
 	Color wallColor, posColor, negColor, zeroColor, medColor, posMedColor,
 			negMedColor, sourceColor;
 	Color schemeColors[][];
@@ -283,6 +291,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawWall(x1, y1, x2, y2);
 	}-*/;
 
+	static native void drawMedium(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, double med) /*-{
+		this.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med);
+	}-*/;
+	
 	static native void doBlank() /*-{
 		this.doBlank();
 	}-*/;
@@ -381,8 +393,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		blankButton.addClickHandler(this);
 		verticalPanel.add(blankWallsButton = new Button("Clear Walls"));
 		blankWallsButton.addClickHandler(this);
-		verticalPanel.add(borderButton = new Button("Add Border"));
+		verticalPanel.add(borderButton = new Button("Add Wall"));
 		borderButton.addClickHandler(this);
+		verticalPanel.add(boxButton = new Button("Add Box"));
+		boxButton.addClickHandler(this);
 		verticalPanel.add(exportButton = new Button("Import/Export"));
 		exportButton.addClickHandler(this);
 
@@ -422,8 +436,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		layoutPanel.add(cv);
 		RootLayoutPanel.get().add(layoutPanel);
 
-	
+		mainMenuBar = new MenuBar(true);
+		mainMenuBar.setAutoOpen(true);
+		composeMainMenu(mainMenuBar);
 		
+        elmMenuBar = new MenuBar(true);
+        elmMenuBar.addItem(elmEditMenuItem = new MenuItem("Edit",new MyCommand("elm","edit")));
+//        elmMenuBar.addItem(elmCutMenuItem = new MenuItem("Cut",new MyCommand("elm","cut")));
+//        elmMenuBar.addItem(elmCopyMenuItem = new MenuItem("Copy",new MyCommand("elm","copy")));
+        elmMenuBar.addItem(elmDeleteMenuItem = new MenuItem("Delete",new MyCommand("elm","delete")));
+//        elmMenuBar.addItem(                    new MenuItem("Duplicate",new MyCommand("elm","duplicate")));
+
 //		winSize = new Dimension(256, 256);
 //		if (pixels == null) {
 //		    pixels = new int[winSize.width*winSize.height];
@@ -446,7 +469,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		cv.addMouseDownHandler(this);
 		cv.addMouseOutHandler(this);
 		cv.addMouseUpHandler(this);
-//		cv.addMou
+		cv.addDomHandler(this,  ContextMenuEvent.getType());
 		
 		reinit();
 		
@@ -458,7 +481,39 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	}
 
+    public void composeMainMenu(MenuBar mainMenuBar) {
+    	mainMenuBar.addItem(getClassCheckItem("Add Wall", "Wall"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Box", "Box"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Cavity", "Cavity"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Medium", "MediumBox"));
+    }
 
+    MenuItem getClassCheckItem(String s, String t) {
+        return new MenuItem(s, new MyCommand("main", t));
+    }
+
+    public void menuPerformed(String menu, String item) {
+    	if (item == "Wall") {
+    		Wall w = new Wall();
+    		w.setInitialPosition();
+    		dragObjects.add(w);
+    	}
+    	if (item == "Box") {
+    		Box w = new Box();
+    		w.setInitialPosition();
+    		dragObjects.add(w);
+    	}
+    	if (item == "MediumBox") {
+    		MediumBox w = new MediumBox();
+    		w.setInitialPosition();
+    		dragObjects.add(w);
+    	}
+    	if (item == "Cavity") {
+    		Cavity w = new Cavity();
+    		w.setInitialPosition();
+    		dragObjects.add(w);
+    	}
+    }
 
 	void calcExceptions() {
 		int x, y;
@@ -499,6 +554,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				+ (gridSizeY - 2) * gw] = true;
 	}
 
+	void createWall(int x1, int y1, int x2, int y2) {
+		Wall w = new Wall(x1, y1, x2, y2);
+		dragObjects.add(w);
+	}
+	
 	void setWall(int x, int y) {
 		walls[x + gw * y] = true;
 	}
@@ -2227,11 +2287,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int i;
 			int x = gridSizeX / 2;
 			int y = windowOffsetY + 8; // +4
-			for (i = 0; i != gridSizeX; i++)
-				setWall(i, y);
-			for (i = -8; i <= 8; i++)
-				// was 4
-				setWall(x + i, y, false);
+			createWall(0, y, x-9, y);
+			createWall(x+9, y, gridSizeX-1, y);
+//			for (i = 0; i != gridSizeX; i++)
+//				setWall(i, y);
+//			for (i = -8; i <= 8; i++)
+//				 was 4
+//				setWall(x + i, y, false);
 			setBrightness(7);
 			setFreqBar(25);
 		}
@@ -4549,11 +4611,35 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	}
 
-	@Override
-	public void onContextMenu(ContextMenuEvent event) {
-		// TODO Auto-generated method stub
+	int menuX, menuY;
+    PopupPanel contextPanel = null;
 
+	@Override
+	public void onContextMenu(ContextMenuEvent e) {
+        e.preventDefault();
+        menuX = e.getNativeEvent().getClientX();
+        menuY = e.getNativeEvent().getClientY();
+        doPopupMenu();
 	}
+
+    void doPopupMenu() {
+    	if (selectedObject != null) {
+//                elmEditMenuItem .setEnabled(mouseElm.getEditInfo(0) != null);
+                contextPanel=new PopupPanel(true);
+                contextPanel.add(elmMenuBar);
+                contextPanel.setPopupPosition(menuX, menuY);
+                contextPanel.show();
+        } else {
+    	int x, y;
+    	
+                contextPanel=new PopupPanel(true);
+                contextPanel.add(mainMenuBar);
+                x=Math.max(0, Math.min(menuX, cv.getCoordinateSpaceWidth()-400));
+                y=Math.max(0, Math.min(menuY,cv.getCoordinateSpaceHeight()-450));
+                contextPanel.setPopupPosition(x,y);
+                contextPanel.show();
+        }
+    }
 
 	@Override
 	public void onDoubleClick(DoubleClickEvent event) {
@@ -4562,14 +4648,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void doCreateWall() {
-		console("docreatewall");
 		Wall w = new Wall();
 		w.setInitialPosition();
 		dragObjects.add(w);
 	}
 	
 	Rectangle findSpace(DragObject obj, int sx, int sy) {
-		return new Rectangle(gridSizeX/2, gridSizeY/2, 20, 1);
+		return new Rectangle(gridSizeX/2, gridSizeY/2, sx, sy);
 	}
 	
 	@Override
@@ -4581,6 +4666,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		} else if (event.getSource() == borderButton) {
 			doCreateWall();
 //			doBorder();
+		} else if (event.getSource() == boxButton) {
+			Box b = new Box();
+			b.setInitialPosition();
+			dragObjects.add(b);
 		} else if (event.getSource() == exportButton) {
 			 doImport();
 		}
@@ -4610,7 +4699,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			    doSetup();
 			if (event.getSource() == colorChooser){
 			    doColor();
-			    GWT.log("rawr");
 			}
 			
 		

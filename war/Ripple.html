@@ -36,7 +36,7 @@
     void main(void) {
         float alpha = 1.0;
             vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-	float med = 1.0-textureColor.b;
+	float med = textureColor.b;
 	vec3 col;
 	if (med == 0.0)
 		col = colors[TS_COL_WALL];
@@ -80,7 +80,7 @@ highp float getSquare(highp vec2 offset)
 {
         highp vec2 x = offset+vTextureCoord;
 	highp vec4 pv = texture2D(uSampler, x);
-        if (pv.b == 0.0)
+        if (pv.b > 0.0)
                 return pv.r;
 #ifdef ACOUSTIC
         return texture2D(uSampler, vTextureCoord-offset).r;
@@ -94,7 +94,7 @@ void main()
         highp float x = 0.;
     highp float newpos = 0.;
         highp vec4 pv = texture2D(uSampler, vTextureCoord);
-        if (pv.b == 0.0) {
+        if (pv.b > 0.0) {
                 highp float p = pv.r;
                 highp float v = pv.g;
                 highp float mid1 = getSquare(vec2(stepSizeX, 0.));
@@ -102,7 +102,7 @@ void main()
                 highp float mid3 = getSquare(vec2(0., stepSizeY));
                 highp float mid4 = getSquare(vec2(0., -stepSizeY));
                 highp float mid = .25*(mid1+mid2+mid3+mid4);
-                highp float med = 1.-pv.b; // texture2D(s_medium, tcoordVarying).r;
+                highp float med = pv.b; // texture2D(s_medium, tcoordVarying).r;
         //highp float med = .6;
         //highp float med = .6;
         // med = .6; // 1.5

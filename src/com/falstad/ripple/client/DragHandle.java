@@ -9,6 +9,12 @@ public class DragHandle {
 		parent = par;
 	}
 	
+	DragHandle(DragObject par, int xa, int ya) {
+		parent = par;
+		x = xa;
+		y = ya;
+	}
+
 	public String toString() { return "DragHandle(" + x + "," + y + ")"; }
 	
 	boolean dragTo(int xd, int yd) {
