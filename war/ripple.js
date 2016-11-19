@@ -3,8 +3,9 @@ var gl;
 var canvas;
 var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
 var windowWidth, windowHeight;
+var sim;
 
-    function getShader(gl, id) {
+    function getShader(gl, id, prefix) {
         var shaderScript = document.getElementById(id);
         if (!shaderScript) {
             return null;
@@ -28,7 +29,8 @@ var windowWidth, windowHeight;
             return null;
         }
 
-	//str = "#define ACOUSTIC 1\n" + str;
+        if (prefix)
+        	str = prefix + str;
         gl.shaderSource(shader, str);
         gl.compileShader(shader);
 
@@ -41,11 +43,11 @@ var windowWidth, windowHeight;
     }
 
 
-    var shaderProgramMain, shaderProgramScreen, shaderProgramDraw;
+    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw;
 
-    function initShader(fs) {
-        var fragmentShader = getShader(gl, fs);
-        var vertexShader = getShader(gl, "shader-vs");
+    function initShader(fs, prefix) {
+        var fragmentShader = getShader(gl, fs, prefix);
+        var vertexShader = getShader(gl, "shader-vs", prefix);
 
         var shaderProgram = gl.createProgram();
         gl.attachShader(shaderProgram, vertexShader);
@@ -75,14 +77,18 @@ var windowWidth, windowHeight;
     }
 
     function initShaders() {
-	shaderProgramMain = initShader("shader-fs");
+	shaderProgramMain = initShader("shader-fs", null);
 	shaderProgramMain.brightnessUniform = gl.getUniformLocation(shaderProgramMain, "brightness");
 	shaderProgramMain.colorsUniform = gl.getUniformLocation(shaderProgramMain, "colors");
 
-	shaderProgramScreen = initShader("shader-screen-fs");
-	shaderProgramScreen.stepSizeXUniform = gl.getUniformLocation(shaderProgramScreen, "stepSizeX");
-	shaderProgramScreen.stepSizeYUniform = gl.getUniformLocation(shaderProgramScreen, "stepSizeY");
+	shaderProgramFixed = initShader("shader-screen-fs", null);
+	shaderProgramFixed.stepSizeXUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeX");
+	shaderProgramFixed.stepSizeYUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeY");
 
+	shaderProgramAcoustic = initShader("shader-screen-fs", "#define ACOUSTIC 1\n");
+	shaderProgramAcoustic.stepSizeXUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeX");
+	shaderProgramAcoustic.stepSizeYUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeY");
+	
 	shaderProgramDraw = initShader("shader-draw-fs");
     }
 
@@ -318,7 +324,8 @@ var windowWidth, windowHeight;
     	var rttTexture = renderTexture1.texture;
         gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
 
-        gl.useProgram(shaderProgramScreen);
+        var prog = sim.acoustic ? shaderProgramAcoustic : shaderProgramFixed;
+        gl.useProgram(prog);
         var rttFramebuffer = renderTexture1.framebuffer;
         gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -329,24 +336,24 @@ var windowWidth, windowHeight;
         //mvPushMatrix();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, simVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgramScreen.vertexPositionAttribute, simVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(prog.vertexPositionAttribute, simVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, simVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramScreen.textureCoordAttribute, simVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(prog.textureCoordAttribute, simVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.enableVertexAttribArray(shaderProgramScreen.dampingAttribute);
+        gl.enableVertexAttribArray(prog.dampingAttribute);
         gl.bindBuffer(gl.ARRAY_BUFFER, simVertexDampingBuffer);
-        gl.vertexAttribPointer(shaderProgramScreen.dampingAttribute, simVertexDampingBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(prog.dampingAttribute, simVertexDampingBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, renderTexture2.texture);
-        gl.uniform1i(shaderProgramScreen.samplerUniform, 0);
-        gl.uniform1f(shaderProgramScreen.stepSizeXUniform, 1/gridSizeX);
-        gl.uniform1f(shaderProgramScreen.stepSizeYUniform, 1/gridSizeY);
+        gl.uniform1i(prog.samplerUniform, 0);
+        gl.uniform1f(prog.stepSizeXUniform, 1/gridSizeX);
+        gl.uniform1f(prog.stepSizeYUniform, 1/gridSizeY);
 
-        setMatrixUniforms(shaderProgramScreen);
+        setMatrixUniforms(prog);
         gl.drawArrays(gl.TRIANGLES, 0, simVertexPositionBuffer.numItems);
-        gl.disableVertexAttribArray(shaderProgramScreen.dampingAttribute);
+        gl.disableVertexAttribArray(prog.dampingAttribute);
     }
 
     function drawSource(x, y, f) {
@@ -394,7 +401,7 @@ var windowWidth, windowHeight;
 
     function drawLineSource(x, y, x2, y2, f) {
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, f, 0.0, 0.0, 1.0);
+        gl.uniform4f(shaderProgramDraw.colorUniform, f, 0.0, 1.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = -1+2*(x +.5)/gridSizeX;
@@ -435,7 +442,79 @@ var windowWidth, windowHeight;
         gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         setMatrixUniforms(shaderProgramDraw);
+        gl.lineWidth(3);
         gl.drawArrays(gl.LINES, 0, 2);
+        gl.lineWidth(1);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    function drawPoke(x, y) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(true, true, false, false);
+
+        gl.useProgram(shaderProgramDraw);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 1.0, 0.0, 0.0, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var verts = [-1+2*(x+.5)/gridSizeX, +1-2*(y+.5)/gridSizeY];
+        var steps = 8;
+        var i;
+        var r = 6;
+        for (i = 0; i != steps+1; i++) {
+        	var ang = Math.PI*2*i/steps;
+        	verts.push(-1+2*(x+r*Math.cos(ang)+.5)/gridSizeX, +1-2*(y+r*Math.sin(ang)+.5)/gridSizeY);
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.disableVertexAttribArray(shaderProgramDraw.textureCoordAttribute);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, 2+steps);
+        gl.enableVertexAttribArray(shaderProgramDraw.textureCoordAttribute); // XXX do as needed
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    function drawEllipse(cx, cy, xr, yr) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shaderProgramDraw);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 0.0, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var coords = [];
+        var i;
+        for (i = -xr; i <= xr; i++) {
+        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
+        			    +1-2*(cy-yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        }
+        for (i = xr-1; i >= -xr; i--) {
+        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
+        				+1-2*(cy+yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        }
+//        debugger;
+        gl.lineWidth(4);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.disableVertexAttribArray(shaderProgramDraw.textureCoordAttribute);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.drawArrays(gl.LINE_LOOP, 0, coords.length/2);
+        gl.enableVertexAttribArray(shaderProgramDraw.textureCoordAttribute); // XXX do as needed
+        gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -533,9 +612,10 @@ var windowWidth, windowHeight;
     }
 
 
-    document.passCanvas = function passCanvas (cv, sim) {
+    document.passCanvas = function passCanvas (cv, sim_) {
     	console.log("pass canvas " + cv);
     	canvas = cv;
+    	sim = sim_;
     	gl = cv.getContext("experimental-webgl");
     	console.log("got gl context " + gl + " " + cv.width + " " + cv.height);
     	var float_texture_ext = gl.getExtension('OES_texture_float');
@@ -554,6 +634,7 @@ var windowWidth, windowHeight;
 
     	gl.clearColor(0.0, 0.0, 1.0, 1.0);
 
+    	sim.acoustic = false;
     	sim.updateRipple = function updateRipple (bright) { drawScene(bright); }
     	sim.simulate = function () { simulate(); }
     	sim.setResolution = function (x, y, wx, wy) {
@@ -573,7 +654,9 @@ var windowWidth, windowHeight;
     	sim.drawSource = function (x, y, f) { drawSource(x, y, f); }
     	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
+    	sim.drawPoke = function (x, y) { drawPoke(x, y); }
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2); }
+    	sim.drawEllipse = function (x, y, x2, y2) { drawEllipse(x, y, x2, y2); }
     	sim.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m); }
     	sim.doBlank = function () {
     		var rttFramebuffer = renderTexture1.framebuffer;

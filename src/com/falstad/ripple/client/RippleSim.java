@@ -193,6 +193,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	DialogBox dialogBox;
 	int verticalPanelWidth;
 	static RippleSim theSim;
+    static EditDialog editDialog;
 
 	static final int MENUBARHEIGHT = 30;
 	static final int MAXVERTICALPANELWIDTH = 166;
@@ -271,6 +272,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.simulate();
 	}-*/;
 
+	static native void setAcoustic(boolean ac) /*-{
+		this.acoustic = ac;
+	}-*/;
+
 	static native void setResolutionGL(int x, int y, int wx, int wy) /*-{
 		this.setResolution(x, y, wx, wy);
 	}-*/;
@@ -283,12 +288,20 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawHandle(x, y);
 	}-*/;
 
+	static native void drawPoke(int x, int y) /*-{
+		this.drawPoke(x, y);
+	}-*/;
+
 	static native void drawLineSource(int x1, int y1, int x2, int y2, double value) /*-{
 		this.drawLineSource(x1, y1, x2, y2, value);
 	}-*/;
 	
 	static native void drawWall(int x1, int y1, int x2, int y2) /*-{
 		this.drawWall(x1, y1, x2, y2);
+	}-*/;
+
+	static native void drawEllipse(int x1, int y1, int rx, int ry) /*-{
+		this.drawEllipse(x1, y1, rx, ry);
 	}-*/;
 
 	static native void drawMedium(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, double med) /*-{
@@ -486,13 +499,27 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Box", "Box"));
     	mainMenuBar.addItem(getClassCheckItem("Add Cavity", "Cavity"));
     	mainMenuBar.addItem(getClassCheckItem("Add Medium", "MediumBox"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Ellipse", "Ellipse"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
         return new MenuItem(s, new MyCommand("main", t));
     }
 
+    public void wallsChanged() {
+    	changedWalls = true;
+    }
+    
     public void menuPerformed(String menu, String item) {
+    	if (item == "delete") {
+    		if (selectedObject != null) {
+    			dragObjects.remove(selectedObject);
+    			selectedObject = null;
+    			wallsChanged();
+    		}
+    	}
+    	if (item == "edit")
+    		doEdit(selectedObject);
     	if (item == "Wall") {
     		Wall w = new Wall();
     		w.setInitialPosition();
@@ -510,6 +537,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	}
     	if (item == "Cavity") {
     		Cavity w = new Cavity();
+    		w.setInitialPosition();
+    		dragObjects.add(w);
+    	}
+    	if (item == "Ellipse") {
+    		Ellipse w = new Ellipse();
     		w.setInitialPosition();
     		dragObjects.add(w);
     	}
@@ -583,6 +615,20 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 		calcExceptions();
 	}
+
+    void doEdit(Editable eable) {
+//        clearSelection();
+//        pushUndo();
+        if (editDialog != null) {
+    //          requestFocus();
+                editDialog.setVisible(false);
+                editDialog = null;
+        }
+        editDialog = new EditDialog(eable, this);
+        editDialog.show();
+    }
+    
+
 
 	boolean moveRight = true;
 	boolean moveDown = true;
@@ -703,6 +749,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			long time = System.currentTimeMillis();
 			int iterCount = speedBar.getValue();
 			int i;
+			setAcoustic(!fixedEndsCheck.getState());
 			for (i = 0; i != iterCount; i++) {
 				simulate();
 				doSources(.25);
@@ -1733,12 +1780,18 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	// doColor();
 	// }
 
+	void deleteAllObjects() {
+		dragObjects.removeAllElements();
+		selectedObject = null;
+		doBlankWalls();
+	}
+	
 	void doSetup() {
 		t = 0;
 		if (resBar.getValue() < 32)
 			setResolution(32);
 		doBlank();
-		doBlankWalls();
+		deleteAllObjects();
 		// don't use previous source positions, use defaults
 		sourceCount = -1;
 		sourceChooser.select(SRC_1S1F);
@@ -4503,7 +4556,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				dragY = event.getY();
 				changedWalls = true;
 			}
-		}
+		} else
+			drawPoke(xp, yp);
 	}
 	
 	public void mouseMoved(MouseEvent e) {
@@ -4566,6 +4620,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 		boolean clearingSelection = (selectedObject != null && sel == null);
 		setSelectedObject(sel);
+		
+		if (selectedObject == null && !clearingSelection)
+			drawPoke(xp, yp);
 		
 		/*
 		handler = cv.addMouseMoveHandler(new MouseMoveHandler(){
@@ -4662,7 +4719,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		if (event.getSource() == blankButton) {
 			doBlank();
 		} else if (event.getSource() == blankWallsButton) {
-			doBlankWalls();
+			deleteAllObjects();
 		} else if (event.getSource() == borderButton) {
 			doCreateWall();
 //			doBorder();

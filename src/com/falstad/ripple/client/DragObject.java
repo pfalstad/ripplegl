@@ -2,7 +2,7 @@ package com.falstad.ripple.client;
 
 import java.util.Vector;
 
-public class DragObject {
+public class DragObject implements Editable {
 	Vector<DragHandle> handles;
 	boolean selected;
 	RippleSim sim;
@@ -116,5 +116,14 @@ public class DragObject {
                 maxy = dh.y;
 		}
 		return new Rectangle(minx, miny, maxx-minx, maxy-miny);
+	}
+
+	@Override
+	public EditInfo getEditInfo(int n) {
+		return null;
+	}
+
+	@Override
+	public void setEditValue(int n, EditInfo ei) {
 	}
 }
