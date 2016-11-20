@@ -61,11 +61,7 @@ var sim;
         gl.useProgram(shaderProgram);
 
         shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-
         shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-        gl.enableVertexAttribArray(shaderProgram.textureCoordAttribute);
-
         shaderProgram.dampingAttribute = gl.getAttribLocation(shaderProgram, "aDamping");
 
         shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
@@ -342,6 +338,9 @@ var sim;
         gl.vertexAttribPointer(prog.textureCoordAttribute, simVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.enableVertexAttribArray(prog.dampingAttribute);
+        gl.enableVertexAttribArray(prog.vertexPositionAttribute);
+        gl.enableVertexAttribArray(prog.textureCoordAttribute);
+        
         gl.bindBuffer(gl.ARRAY_BUFFER, simVertexDampingBuffer);
         gl.vertexAttribPointer(prog.dampingAttribute, simVertexDampingBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -354,6 +353,8 @@ var sim;
         setMatrixUniforms(prog);
         gl.drawArrays(gl.TRIANGLES, 0, simVertexPositionBuffer.numItems);
         gl.disableVertexAttribArray(prog.dampingAttribute);
+        gl.disableVertexAttribArray(prog.vertexPositionAttribute);
+        gl.disableVertexAttribArray(prog.textureCoordAttribute);
     }
 
     function drawSource(x, y, f) {
@@ -367,11 +368,12 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
+//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.LINES, 0, 2);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         //mvPopMatrix();
     }
@@ -389,12 +391,14 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         setMatrixUniforms(shaderProgramDraw);
 //        gl.lineWidth(3);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINE_LOOP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         //mvPopMatrix();
     }
@@ -411,11 +415,10 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
         setMatrixUniforms(shaderProgramDraw);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINES, 0, 2);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         //mvPopMatrix();
     }
@@ -438,12 +441,11 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
         setMatrixUniforms(shaderProgramDraw);
         gl.lineWidth(3);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINES, 0, 2);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
@@ -471,11 +473,11 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.disableVertexAttribArray(shaderProgramDraw.textureCoordAttribute);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.TRIANGLE_FAN, 0, 2+steps);
-        gl.enableVertexAttribArray(shaderProgramDraw.textureCoordAttribute); // XXX do as needed
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -502,18 +504,15 @@ var sim;
         	coords.push(-1+2*(cx-i+.5)/gridSizeX,
         				+1-2*(cy+yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
         }
-//        debugger;
         gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-        gl.disableVertexAttribArray(shaderProgramDraw.textureCoordAttribute);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.LINE_LOOP, 0, coords.length/2);
-        gl.enableVertexAttribArray(shaderProgramDraw.textureCoordAttribute); // XXX do as needed
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
@@ -544,11 +543,10 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
         setMatrixUniforms(shaderProgramDraw);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -584,7 +582,11 @@ var sim;
         gl.uniform3fv(shaderProgramMain.colorsUniform, colors);
 
         setMatrixUniforms(shaderProgramMain);
+        gl.enableVertexAttribArray(shaderProgramMain.vertexPositionAttribute);
+        gl.enableVertexAttribArray(shaderProgramMain.textureCoordAttribute);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, laptopScreenVertexPositionBuffer.numItems);
+        gl.disableVertexAttribArray(shaderProgramMain.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramMain.textureCoordAttribute);
 
         mvPopMatrix();
     }
@@ -630,7 +632,7 @@ var sim;
     	initTextures();
     	//loadLaptop();
 
-    	drawWalls(renderTexture1);
+//    	drawWalls(renderTexture1);
 
     	gl.clearColor(0.0, 0.0, 1.0, 1.0);
 
