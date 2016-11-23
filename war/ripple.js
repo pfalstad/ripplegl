@@ -519,6 +519,75 @@ var sim;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
+    function drawParabola(x1, y1, w, h) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shaderProgramDraw);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 0.0, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var coords = [];
+        var i;
+        var w2 = w/2;
+        var a = h/(w2*w2);
+        for (i = 0; i <= w; i++) {
+        	var x0 = i-w2;
+        	coords.push(-1+2*(x1+i+.5)/gridSizeX,
+        			    +1-2*(y1+h+.5-a*x0*x0)/gridSizeY);
+        }
+        gl.lineWidth(4);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.drawArrays(gl.LINE_STRIP, 0, coords.length/2);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.lineWidth(1);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    function drawSolidEllipse(cx, cy, xr, yr, med) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shaderProgramDraw);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, med, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var coords = [-1+2*(cx+.5)/gridSizeX, +1-2*(cy+.5)/gridSizeY];
+        var i;
+        for (i = -xr; i <= xr; i++) {
+        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
+        			    +1-2*(cy-yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        }
+        for (i = xr-1; i >= -xr; i--) {
+        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
+        				+1-2*(cy+yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        }
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, coords.length/2);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
     function drawMedium(x, y, x2, y2, x3, y3, x4, y4, m) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
@@ -546,6 +615,38 @@ var sim;
         setMatrixUniforms(shaderProgramDraw);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    function drawTriangle(x, y, x2, y2, x3, y3, m) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shaderProgramDraw);
+//        console("draw triangle " + m);
+        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, m, 1.0);
+
+        var medCoords = [
+                         -1+2*(x +.5)/gridSizeX,
+                         +1-2*(y +.5)/gridSizeY,
+                         -1+2*(x2+.5)/gridSizeX,
+                         +1-2*(y2+.5)/gridSizeY,
+                         -1+2*(x3+.5)/gridSizeX,
+                         +1-2*(y3+.5)/gridSizeY
+                         ];
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
 		gl.colorMask(true, true, true, true);
@@ -658,8 +759,11 @@ var sim;
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
     	sim.drawPoke = function (x, y) { drawPoke(x, y); }
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2); }
-    	sim.drawEllipse = function (x, y, x2, y2) { drawEllipse(x, y, x2, y2); }
+    	sim.drawParabola = function (x, y, w, h) { drawParabola(x, y, w, h); }
+    	sim.drawEllipse = function (x, y, x2, y2, m) { drawEllipse(x, y, x2, y2); }
+    	sim.drawSolidEllipse = function (x, y, x2, y2, m) { drawSolidEllipse(x, y, x2, y2, m); }
     	sim.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m); }
+    	sim.drawTriangle = function (x, y, x2, y2, x3, y3, m) { drawTriangle(x, y, x2, y2, x3, y3, m); }
     	sim.doBlank = function () {
     		var rttFramebuffer = renderTexture1.framebuffer;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);

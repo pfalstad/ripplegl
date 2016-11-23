@@ -9,4 +9,5 @@ public class Box extends RectDragObject {
 		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
 	}
 
+	boolean hitTestInside(double x, double y) { return false; }
 }

@@ -304,10 +304,22 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawEllipse(x1, y1, rx, ry);
 	}-*/;
 
+	static native void drawParabola(int x1, int y1, int w, int h) /*-{
+		this.drawParabola(x1, y1, w, h);
+	}-*/;
+
+	static native void drawSolidEllipse(int x1, int y1, int rx, int ry, double med) /*-{
+		this.drawSolidEllipse(x1, y1, rx, ry, med);
+	}-*/;
+
 	static native void drawMedium(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, double med) /*-{
 		this.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med);
 	}-*/;
 	
+	static native void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, double med) /*-{
+		this.drawTriangle(x1, y1, x2, y2, x3, y3, med);
+	}-*/;
+
 	static native void doBlank() /*-{
 		this.doBlank();
 	}-*/;
@@ -497,9 +509,15 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     public void composeMainMenu(MenuBar mainMenuBar) {
     	mainMenuBar.addItem(getClassCheckItem("Add Wall", "Wall"));
     	mainMenuBar.addItem(getClassCheckItem("Add Box", "Box"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Source", "Source"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Line Source", "LineSource"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Solid Box", "SolidBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Cavity", "Cavity"));
     	mainMenuBar.addItem(getClassCheckItem("Add Medium", "MediumBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse", "Ellipse"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Prism", "TrianglePrism"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Ellipse Medium", "MediumEllipse"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Parabola", "Parabola"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
@@ -520,32 +538,35 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	}
     	if (item == "edit")
     		doEdit(selectedObject);
-    	if (item == "Wall") {
-    		Wall w = new Wall();
-    		w.setInitialPosition();
-    		dragObjects.add(w);
+    	DragObject newObject = null;
+    	if (item == "Wall")
+    		newObject = new Wall();
+    	if (item == "Box")
+    		newObject = new Box();
+    	if (item == "MediumBox")
+    		newObject = new MediumBox();
+    	if (item == "Cavity")
+    		newObject = new Cavity();
+    	if (item == "MediumEllipse")
+    		newObject = new MediumEllipse();
+    	if (item == "Ellipse")
+    		newObject = new Ellipse();
+    	if (item == "SolidBox")
+    		newObject = new SolidBox();
+    	if (item == "TrianglePrism")
+    		newObject = new TrianglePrism();
+    	if (item == "Parabola")
+    		newObject = new Parabola();
+    	if (item == "Source")
+    		newObject = new Source();
+    	if (item == "LineSource")
+    		newObject = new LineSource();
+    	if (newObject != null) {
+    		newObject.setInitialPosition();
+    		dragObjects.add(newObject);
+    		setSelectedObject(newObject);
     	}
-    	if (item == "Box") {
-    		Box w = new Box();
-    		w.setInitialPosition();
-    		dragObjects.add(w);
-    	}
-    	if (item == "MediumBox") {
-    		MediumBox w = new MediumBox();
-    		w.setInitialPosition();
-    		dragObjects.add(w);
-    	}
-    	if (item == "Cavity") {
-    		Cavity w = new Cavity();
-    		w.setInitialPosition();
-    		dragObjects.add(w);
-    	}
-    	if (item == "Ellipse") {
-    		Ellipse w = new Ellipse();
-    		w.setInitialPosition();
-    		dragObjects.add(w);
-    	}
-    }
+}
 
 	void calcExceptions() {
 		int x, y;
@@ -753,6 +774,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			for (i = 0; i != iterCount; i++) {
 				simulate();
 				doSources(.25);
+				int j;
+				for (j = 0; j != dragObjects.size(); j++)
+					dragObjects.get(j).run();
 				// limit frame time
 				if (System.currentTimeMillis()-time > 100)
 					break;
@@ -4603,14 +4627,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 		
 		DragObject sel = null;
+		bestf = 1e8;
 		int i;
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject obj = dragObjects.get(i);
 			double ht = obj.hitTest(xp, yp);
 			
 	        // if there are no better options, select a RectDragObject if we're tapping
-	        // inside it.  But allow TM_POKE to work inside hollow objects.
-			// XXX (not implemented)
+	        // inside it.
+			if (ht > minf && !obj.hitTestInside(xp, yp))
+				continue;
 			
 			// find best match
 			if (ht < bestf) {

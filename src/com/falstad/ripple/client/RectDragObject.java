@@ -20,6 +20,7 @@ public class RectDragObject extends DragObject {
 		Point origin = rotatedOrigin();
 		x -= origin.x;
 		y -= origin.y;
+//		sim.console("hti " + x + " " + y + " " + width() + " "+ height());
 		return x >= 0 && x <= width() && y >= 0 && y <= height(); 
 	}
 	
@@ -92,7 +93,7 @@ public class RectDragObject extends DragObject {
 		return result;
 	}
 	
-	int width() { return topLeft.x-topRight.x; }
+	int width() { return topRight.x-topLeft.x; }
 	int height() { return bottomLeft.y-topLeft.y; }
 	Point rotatedOrigin() { return new Point(topLeft.x, topLeft.y); }
 	

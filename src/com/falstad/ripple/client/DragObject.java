@@ -16,7 +16,8 @@ public class DragObject implements Editable {
 	void prepare() {}
 	void select() { selected = true; }
 	void deselect() { selected = false; }
-
+	void run() {}
+	
 	boolean drag(int dx, int dy) {
 		int i;
 		for (i = 0; i != handles.size(); i++) {
@@ -67,6 +68,8 @@ public class DragObject implements Editable {
 	    return dist;
 	}
 
+	boolean hitTestInside(double x, double y) { return false; }
+	
 	double hitTest(int x, int y) {
 		if (handles.size() == 1) {
 			DragHandle dh = handles.get(0);
