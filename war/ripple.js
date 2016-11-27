@@ -43,11 +43,12 @@ var sim;
     }
 
 
-    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw;
+    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw, shaderProgramMode;
 
     function initShader(fs, prefix) {
         var fragmentShader = getShader(gl, fs, prefix);
-        var vertexShader = getShader(gl, "shader-vs", prefix);
+        var vs = (fs == "shader-draw-fs" || fs == "shader-mode-fs") ? "shader-draw-vs" : "shader-vs";
+        var vertexShader = getShader(gl, vs, prefix);
 
         var shaderProgram = gl.createProgram();
         gl.attachShader(shaderProgram, vertexShader);
@@ -63,29 +64,30 @@ var sim;
         shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
         shaderProgram.textureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
         shaderProgram.dampingAttribute = gl.getAttribLocation(shaderProgram, "aDamping");
+        shaderProgram.colorAttribute = gl.getAttribLocation(shaderProgram, "aColor");
 
         shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
         shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
         shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
-        shaderProgram.colorUniform = gl.getUniformLocation(shaderProgram, "color");
 
-	return shaderProgram;
+        return shaderProgram;
     }
 
     function initShaders() {
-	shaderProgramMain = initShader("shader-fs", null);
-	shaderProgramMain.brightnessUniform = gl.getUniformLocation(shaderProgramMain, "brightness");
-	shaderProgramMain.colorsUniform = gl.getUniformLocation(shaderProgramMain, "colors");
+    	shaderProgramMain = initShader("shader-fs", null);
+    	shaderProgramMain.brightnessUniform = gl.getUniformLocation(shaderProgramMain, "brightness");
+    	shaderProgramMain.colorsUniform = gl.getUniformLocation(shaderProgramMain, "colors");
 
-	shaderProgramFixed = initShader("shader-screen-fs", null);
-	shaderProgramFixed.stepSizeXUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeX");
-	shaderProgramFixed.stepSizeYUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeY");
+    	shaderProgramFixed = initShader("shader-screen-fs", null);
+    	shaderProgramFixed.stepSizeXUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeX");
+    	shaderProgramFixed.stepSizeYUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeY");
 
-	shaderProgramAcoustic = initShader("shader-screen-fs", "#define ACOUSTIC 1\n");
-	shaderProgramAcoustic.stepSizeXUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeX");
-	shaderProgramAcoustic.stepSizeYUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeY");
-	
-	shaderProgramDraw = initShader("shader-draw-fs");
+    	shaderProgramAcoustic = initShader("shader-screen-fs", "#define ACOUSTIC 1\n");
+    	shaderProgramAcoustic.stepSizeXUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeX");
+    	shaderProgramAcoustic.stepSizeYUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeY");
+
+    	shaderProgramDraw = initShader("shader-draw-fs");
+    	shaderProgramMode = initShader("shader-mode-fs");
     }
 
     var moonTexture;
@@ -212,6 +214,12 @@ var sim;
     	sourceBuffer.itemSize = 2;
     	sourceBuffer.numItems = 2;
 
+    	if (!colorBuffer)
+    		colorBuffer = gl.createBuffer();
+    	gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+    	colorBuffer.itemSize = 4;
+    	colorBuffer.numItems = 2;
+
     	simPosition = [];
     	simDamping = [];
     	simTextureCoord = [];
@@ -272,6 +280,7 @@ var sim;
     var laptopVertexTextureCoordBuffer;
     var laptopVertexIndexBuffer;
     var sourceBuffer;
+    var colorBuffer;
     var colors;
 
     var moonAngle = 180;
@@ -288,7 +297,7 @@ var sim;
 	mat4.identity(pMatrix);
         mat4.identity(mvMatrix);
 
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 0.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
 
         var positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -359,7 +368,7 @@ var sim;
 
     function drawSource(x, y, f) {
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, f, 0.0, 1.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, f, 0.0, 1.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = srcCoords[2] = -1+2*(x+.5)/gridSizeX;
@@ -380,7 +389,7 @@ var sim;
 
     function drawHandle(x, y) {
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 1, 1.0, 1.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1, 1.0, 1.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var cx = -1+2*(x+.5)/windowWidth;
@@ -405,7 +414,7 @@ var sim;
 
     function drawLineSource(x, y, x2, y2, f) {
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, f, 0.0, 1.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, f, 0.0, 1.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = -1+2*(x +.5)/gridSizeX;
@@ -423,7 +432,7 @@ var sim;
         //mvPopMatrix();
     }
 
-    function drawWall(x, y, x2, y2) {
+    function drawWall(x, y, x2, y2, v) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
 		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
@@ -431,7 +440,7 @@ var sim;
 //		gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 0.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = -1+2*(x +.5)/gridSizeX;
@@ -459,27 +468,37 @@ var sim;
 		gl.colorMask(true, true, false, false);
 
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 1.0, 0.0, 0.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1.0, 0.0, 0.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var verts = [-1+2*(x+.5)/gridSizeX, +1-2*(y+.5)/gridSizeY];
+        var colors = [1,0,0,1];
         var steps = 8;
         var i;
         var r = 6;
         for (i = 0; i != steps+1; i++) {
         	var ang = Math.PI*2*i/steps;
         	verts.push(-1+2*(x+r*Math.cos(ang)+.5)/gridSizeX, +1-2*(y+r*Math.sin(ang)+.5)/gridSizeY);
+        	colors.push(0,0,0,0);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.colorAttribute, 4, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shaderProgramDraw.colorAttribute);
 
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.TRIANGLE_FAN, 0, 2+steps);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramDraw.colorAttribute);
 
 		gl.colorMask(true, true, true, true);
+		gl.disable(gl.BLEND);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
@@ -491,7 +510,7 @@ var sim;
 //		gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 0.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [];
@@ -527,7 +546,7 @@ var sim;
 //		gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, 0.0, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [];
@@ -562,7 +581,7 @@ var sim;
 //		gl.clear(gl.COLOR_BUFFER_BIT);
 
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, med, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, med, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [-1+2*(cx+.5)/gridSizeX, +1-2*(cy+.5)/gridSizeY];
@@ -588,15 +607,13 @@ var sim;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    function drawMedium(x, y, x2, y2, x3, y3, x4, y4, m) {
+    function drawMedium(x, y, x2, y2, x3, y3, x4, y4, m1, m2) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
 		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
 		gl.colorMask(false, false, true, false);
 //		gl.clear(gl.COLOR_BUFFER_BIT);
-
         gl.useProgram(shaderProgramDraw);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, m, 1.0);
 
         var medCoords = [
                          -1+2*(x +.5)/gridSizeX,
@@ -608,19 +625,77 @@ var sim;
                          -1+2*(x4+.5)/gridSizeX,
                          +1-2*(y4+.5)/gridSizeY
                          ];
+        var colors = [ 0,0,m1,1, 0,0,m1,1, 0,0,m2,1, 0,0,m2,1 ];
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.colorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
         setMatrixUniforms(shaderProgramDraw);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.enableVertexAttribArray(shaderProgramDraw.colorAttribute);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramDraw.colorAttribute);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
+    function drawModes(x, y, x2, y2, a, b, c, d) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(true, true, false, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(shaderProgramMode);
+        var z = 0;
+        var z2 = 0;
+        if (sim.acoustic) {
+        	z = Math.PI/2;
+        	a += z;
+        	b += z;
+        	if (c || d) {
+        		z2 = z;
+        		c += z;
+        		d += z;
+        	}
+    	}
+
+        var medCoords = [
+                         -1+2*(x +.5)/gridSizeX,
+                         +1-2*(y +.5)/gridSizeY,
+                         -1+2*(x +.5)/gridSizeX,
+                         +1-2*(y2+.5)/gridSizeY,
+                         -1+2*(x2+.5)/gridSizeX,
+                         +1-2*(y +.5)/gridSizeY,
+                         -1+2*(x2+.5)/gridSizeX,
+                         +1-2*(y2+.5)/gridSizeY
+                         ];
+        var colors = [ z,z,z2,z2, z,b,z2,d, a,z,c,z2, a,b,c,d ];
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramMode.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramMode.colorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        setMatrixUniforms(shaderProgramMode);
+        gl.enableVertexAttribArray(shaderProgramMode.vertexPositionAttribute);
+        gl.enableVertexAttribArray(shaderProgramMode.colorAttribute);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramMode.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramMode.colorAttribute);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+
+    
     function drawTriangle(x, y, x2, y2, x3, y3, m) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
@@ -630,7 +705,7 @@ var sim;
 
         gl.useProgram(shaderProgramDraw);
 //        console("draw triangle " + m);
-        gl.uniform4f(shaderProgramDraw.colorUniform, 0.0, 0.0, m, 1.0);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, m, 1.0);
 
         var medCoords = [
                          -1+2*(x +.5)/gridSizeX,
@@ -758,12 +833,14 @@ var sim;
     	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
     	sim.drawPoke = function (x, y) { drawPoke(x, y); }
-    	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2); }
+    	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 0); }
+    	sim.clearWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 1); }
     	sim.drawParabola = function (x, y, w, h) { drawParabola(x, y, w, h); }
     	sim.drawEllipse = function (x, y, x2, y2, m) { drawEllipse(x, y, x2, y2); }
     	sim.drawSolidEllipse = function (x, y, x2, y2, m) { drawSolidEllipse(x, y, x2, y2, m); }
-    	sim.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m); }
+    	sim.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m, m2) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m, m2); }
     	sim.drawTriangle = function (x, y, x2, y2, x3, y3, m) { drawTriangle(x, y, x2, y2, x3, y3, m); }
+    	sim.drawModes = function (x, y, x2, y2, a, b, c, d) { drawModes(x, y, x2, y2, a, b, c, d); }
     	sim.doBlank = function () {
     		var rttFramebuffer = renderTexture1.framebuffer;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);

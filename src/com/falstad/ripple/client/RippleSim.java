@@ -133,6 +133,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	boolean showControls;
 	boolean changedWalls;
 	double t;
+	int iters;
 	// MemoryImageSource imageSource;
 	CanvasPixelArray pixels;
 	int sourceCount = -1;
@@ -300,6 +301,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawWall(x1, y1, x2, y2);
 	}-*/;
 
+	static native void clearWall(int x1, int y1, int x2, int y2) /*-{
+		this.clearWall(x1, y1, x2, y2);
+	}-*/;
+
 	static native void drawEllipse(int x1, int y1, int rx, int ry) /*-{
 		this.drawEllipse(x1, y1, rx, ry);
 	}-*/;
@@ -312,10 +317,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawSolidEllipse(x1, y1, rx, ry, med);
 	}-*/;
 
-	static native void drawMedium(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, double med) /*-{
-		this.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med);
+	static native void drawMedium(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4, double med, double med2) /*-{
+		this.drawMedium(x1, y1, x2, y2, x3, y3, x4, y4, med, med2);
 	}-*/;
 	
+	static native void drawModes(int x1, int y1, int x2, int y2, double a, double b, double c, double d) /*-{
+		this.drawModes(x1, y1, x2, y2, a, b, c, d);
+	}-*/;
+
 	static native void drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, double med) /*-{
 		this.drawTriangle(x1, y1, x2, y2, x3, y3, med);
 	}-*/;
@@ -512,8 +521,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Source", "Source"));
     	mainMenuBar.addItem(getClassCheckItem("Add Line Source", "LineSource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Solid Box", "SolidBox"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Moving Wall", "MovingWall"));
     	mainMenuBar.addItem(getClassCheckItem("Add Cavity", "Cavity"));
     	mainMenuBar.addItem(getClassCheckItem("Add Medium", "MediumBox"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Mode Box", "ModeBox"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Gradient", "GradientBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse", "Ellipse"));
     	mainMenuBar.addItem(getClassCheckItem("Add Prism", "TrianglePrism"));
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse Medium", "MediumEllipse"));
@@ -545,6 +557,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new Box();
     	if (item == "MediumBox")
     		newObject = new MediumBox();
+    	if (item == "GradientBox")
+    		newObject = new GradientBox();
     	if (item == "Cavity")
     		newObject = new Cavity();
     	if (item == "MediumEllipse")
@@ -553,6 +567,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new Ellipse();
     	if (item == "SolidBox")
     		newObject = new SolidBox();
+    	if (item == "MovingWall")
+    		newObject = new MovingWall();
+    	if (item == "ModeBox")
+    		newObject = new ModeBox();
     	if (item == "TrianglePrism")
     		newObject = new TrianglePrism();
     	if (item == "Parabola")
@@ -777,6 +795,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				int j;
 				for (j = 0; j != dragObjects.size(); j++)
 					dragObjects.get(j).run();
+				iters++;
 				// limit frame time
 				if (System.currentTimeMillis()-time > 100)
 					break;

@@ -58,10 +58,38 @@
     precision mediump float;
 
     varying vec4 vPosition;
-    uniform vec4 color;
+	varying vec4 vColor;
 
     void main(void) {
-        gl_FragColor = color;
+        gl_FragColor = vColor;
+    }
+</script>
+
+<script id="shader-draw-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    varying vec4 vPosition;
+	varying vec4 vColor;
+
+    void main(void) {
+        vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+        gl_Position = uPMatrix * vPosition;
+		vColor = aColor;
+    }
+</script>
+
+<script id="shader-mode-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec4 vPosition;
+	varying vec4 vColor;
+
+    void main(void) {
+        gl_FragColor = vec4(sin(vColor.r)*sin(vColor.g)+sin(vColor.b)*sin(vColor.a), 0., 0., 0.);
     }
 </script>
 
