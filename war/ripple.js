@@ -573,6 +573,42 @@ var sim;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
+    function drawLens(x1, y1, w, h, m) {
+		var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		gl.colorMask(false, false, true, false);
+//		gl.clear(gl.COLOR_BUFFER_BIT);
+
+        gl.useProgram(shaderProgramDraw);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, m, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var i;
+        var w2 = w/2;
+        var coords = [-1+2*(x1+w2+.5)/gridSizeX, +1-2*(y1+h+.5)/gridSizeY];
+        var ym = h/(Math.sqrt(2)-1);
+        for (i = 0; i <= w; i++) {
+        	var x = (i-w2)/w2;
+        	var y = ym*(Math.sqrt(1+x*x)-1);
+        	coords.push(-1+2*(x1+i+.5)/gridSizeX,
+        			    +1-2*(y1+y+.5)/gridSizeY);
+        }
+        gl.lineWidth(4);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+
+        setMatrixUniforms(shaderProgramDraw);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, coords.length/2);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.lineWidth(1);
+
+		gl.colorMask(true, true, true, true);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    
     function drawSolidEllipse(cx, cy, xr, yr, med) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
@@ -836,6 +872,7 @@ var sim;
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 0); }
     	sim.clearWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 1); }
     	sim.drawParabola = function (x, y, w, h) { drawParabola(x, y, w, h); }
+    	sim.drawLens = function (x, y, w, h, m) { drawLens(x, y, w, h, m); }
     	sim.drawEllipse = function (x, y, x2, y2, m) { drawEllipse(x, y, x2, y2); }
     	sim.drawSolidEllipse = function (x, y, x2, y2, m) { drawSolidEllipse(x, y, x2, y2, m); }
     	sim.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m, m2) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m, m2); }

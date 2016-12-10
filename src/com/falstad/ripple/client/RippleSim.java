@@ -313,6 +313,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawParabola(x1, y1, w, h);
 	}-*/;
 
+	static native void drawLens(int x1, int y1, int w, int h, double med) /*-{
+		this.drawLens(x1, y1, w, h, med);
+	}-*/;
+
+
 	static native void drawSolidEllipse(int x1, int y1, int rx, int ry, double med) /*-{
 		this.drawSolidEllipse(x1, y1, rx, ry, med);
 	}-*/;
@@ -522,6 +527,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Line Source", "LineSource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Solid Box", "SolidBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Moving Wall", "MovingWall"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Moving Source", "MovingSource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Cavity", "Cavity"));
     	mainMenuBar.addItem(getClassCheckItem("Add Medium", "MediumBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Mode Box", "ModeBox"));
@@ -530,6 +536,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Prism", "TrianglePrism"));
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse Medium", "MediumEllipse"));
     	mainMenuBar.addItem(getClassCheckItem("Add Parabola", "Parabola"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Lens", "Lens"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
@@ -569,12 +576,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new SolidBox();
     	if (item == "MovingWall")
     		newObject = new MovingWall();
+    	if (item == "MovingSource")
+    		newObject = new MovingSource();
     	if (item == "ModeBox")
     		newObject = new ModeBox();
     	if (item == "TrianglePrism")
     		newObject = new TrianglePrism();
     	if (item == "Parabola")
     		newObject = new Parabola();
+    	if (item == "Lens")
+    		newObject = new Lens();
     	if (item == "Source")
     		newObject = new Source();
     	if (item == "LineSource")
@@ -4726,7 +4737,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
     void doPopupMenu() {
     	if (selectedObject != null) {
-//                elmEditMenuItem .setEnabled(mouseElm.getEditInfo(0) != null);
+                elmEditMenuItem .setEnabled(selectedObject.getEditInfo(0) != null);
                 contextPanel=new PopupPanel(true);
                 contextPanel.add(elmMenuBar);
                 contextPanel.setPopupPosition(menuX, menuY);
