@@ -286,15 +286,16 @@ var sim;
     var moonAngle = 180;
     var cubeAngle = 0;
 
-    function drawWalls(rt) {
-	var rttFramebuffer = rt.framebuffer;
+    /*
+    function drawWallsNotUsed(rt) {
+    	var rttFramebuffer = rt.framebuffer;
         gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
 
         gl.useProgram(shaderProgramDraw);
         gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	mat4.identity(pMatrix);
+        mat4.identity(pMatrix);
         mat4.identity(mvMatrix);
 
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
@@ -319,7 +320,8 @@ var sim;
         setMatrixUniforms(shaderProgramDraw);
         //gl.drawArrays(gl.TRIANGLE_STRIP, 0, positionBuffer.numItems);
     }
-
+*/
+    
     function simulate() {
     	var rt = renderTexture1;
     	renderTexture1 = renderTexture2;
@@ -371,15 +373,16 @@ var sim;
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, f, 0.0, 1.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        srcCoords[0] = srcCoords[2] = -1+2*(x+.5)/gridSizeX;
-        srcCoords[1] = +1-2*(y+.5)/gridSizeY;
-        srcCoords[3] = srcCoords[1]+2/gridSizeY;
+        srcCoords[0] = srcCoords[2] = x;
+        srcCoords[1] = y;
+        srcCoords[3] = srcCoords[1]+1;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
 //        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
 //        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.LINES, 0, 2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -417,19 +420,27 @@ var sim;
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, f, 0.0, 1.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        srcCoords[0] = -1+2*(x +.5)/gridSizeX;
-        srcCoords[1] = +1-2*(y +.5)/gridSizeY;
-        srcCoords[2] = -1+2*(x2+.5)/gridSizeX;
-        srcCoords[3] = +1-2*(y2+.5)/gridSizeY;
+        srcCoords[0] = x;
+        srcCoords[1] = y;
+        srcCoords[2] = x2;
+        srcCoords[3] = y2;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINES, 0, 2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         //mvPopMatrix();
+    }
+
+    function loadMatrix(mtx) {
+    	mtx[0] = +2/gridSizeX;
+    	mtx[5] = -2/gridSizeY;
+    	mtx[12] = -1 + .5*mtx[0];
+    	mtx[13] = +1 + .5*mtx[5];
     }
 
     function drawWall(x, y, x2, y2, v) {
@@ -443,13 +454,14 @@ var sim;
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        srcCoords[0] = -1+2*(x +.5)/gridSizeX;
-        srcCoords[1] = +1-2*(y +.5)/gridSizeY;
-        srcCoords[2] = -1+2*(x2+.5)/gridSizeX;
-        srcCoords[3] = +1-2*(y2+.5)/gridSizeY;
+        srcCoords[0] = x;
+        srcCoords[1] = y;
+        srcCoords[2] = x2;
+        srcCoords[3] = y2;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.lineWidth(3);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -471,14 +483,14 @@ var sim;
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1.0, 0.0, 0.0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        var verts = [-1+2*(x+.5)/gridSizeX, +1-2*(y+.5)/gridSizeY];
+        var verts = [x, y];
         var colors = [1,0,0,1];
         var steps = 8;
         var i;
         var r = 6;
         for (i = 0; i != steps+1; i++) {
         	var ang = Math.PI*2*i/steps;
-        	verts.push(-1+2*(x+r*Math.cos(ang)+.5)/gridSizeX, +1-2*(y+r*Math.sin(ang)+.5)/gridSizeY);
+        	verts.push(x+r*Math.cos(ang), y+r*Math.sin(ang));
         	colors.push(0,0,0,0);
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
@@ -492,6 +504,7 @@ var sim;
         gl.vertexAttribPointer(shaderProgramDraw.colorAttribute, 4, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shaderProgramDraw.colorAttribute);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.TRIANGLE_FAN, 0, 2+steps);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -516,12 +529,10 @@ var sim;
         var coords = [];
         var i;
         for (i = -xr; i <= xr; i++) {
-        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
-        			    +1-2*(cy-yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        	coords.push(cx-i, cy-yr*Math.sqrt(1-i*i/(xr*xr)));
         }
         for (i = xr-1; i >= -xr; i--) {
-        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
-        				+1-2*(cy+yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        	coords.push(cx-i, cy+yr*Math.sqrt(1-i*i/(xr*xr)));
         }
         gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
@@ -529,6 +540,7 @@ var sim;
 
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.LINE_LOOP, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -555,8 +567,7 @@ var sim;
         var a = h/(w2*w2);
         for (i = 0; i <= w; i++) {
         	var x0 = i-w2;
-        	coords.push(-1+2*(x1+i+.5)/gridSizeX,
-        			    +1-2*(y1+h+.5-a*x0*x0)/gridSizeY);
+        	coords.push(x1+i, y1+h-a*x0*x0);
         }
         gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
@@ -564,6 +575,7 @@ var sim;
 
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.LINE_STRIP, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -586,20 +598,20 @@ var sim;
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var i;
         var w2 = w/2;
-        var coords = [-1+2*(x1+w2+.5)/gridSizeX, +1-2*(y1+h+.5)/gridSizeY];
+        var coords = [x1+w2, y1+h];
         var ym = h/(Math.sqrt(2)-1);
         for (i = 0; i <= w; i++) {
         	var x = (i-w2)/w2;
         	var y = ym*(Math.sqrt(1+x*x)-1);
-        	coords.push(-1+2*(x1+i+.5)/gridSizeX,
-        			    +1-2*(y1+y+.5)/gridSizeY);
+        	coords.push(x1+i, y1+y);
         }
         gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-
+        
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.TRIANGLE_FAN, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -620,21 +632,20 @@ var sim;
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, med, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        var coords = [-1+2*(cx+.5)/gridSizeX, +1-2*(cy+.5)/gridSizeY];
+        var coords = [cx, cy];
         var i;
         for (i = -xr; i <= xr; i++) {
-        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
-        			    +1-2*(cy-yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        	coords.push(cx-i, cy-yr*Math.sqrt(1-i*i/(xr*xr)));
         }
         for (i = xr-1; i >= -xr; i--) {
-        	coords.push(-1+2*(cx-i+.5)/gridSizeX,
-        				+1-2*(cy+yr*Math.sqrt(1-i*i/(xr*xr)))/gridSizeY);
+        	coords.push(cx-i, cy+yr*Math.sqrt(1-i*i/(xr*xr)));
         }
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.TRIANGLE_FAN, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -651,16 +662,7 @@ var sim;
 //		gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(shaderProgramDraw);
 
-        var medCoords = [
-                         -1+2*(x +.5)/gridSizeX,
-                         +1-2*(y +.5)/gridSizeY,
-                         -1+2*(x2+.5)/gridSizeX,
-                         +1-2*(y2+.5)/gridSizeY,
-                         -1+2*(x3+.5)/gridSizeX,
-                         +1-2*(y3+.5)/gridSizeY,
-                         -1+2*(x4+.5)/gridSizeX,
-                         +1-2*(y4+.5)/gridSizeY
-                         ];
+        var medCoords = [x, y, x2, y2, x3, y3, x4, y4];
         var colors = [ 0,0,m1,1, 0,0,m1,1, 0,0,m2,1, 0,0,m2,1 ];
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
@@ -670,6 +672,7 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.colorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.enableVertexAttribArray(shaderProgramDraw.colorAttribute);
@@ -701,16 +704,7 @@ var sim;
         	}
     	}
 
-        var medCoords = [
-                         -1+2*(x +.5)/gridSizeX,
-                         +1-2*(y +.5)/gridSizeY,
-                         -1+2*(x +.5)/gridSizeX,
-                         +1-2*(y2+.5)/gridSizeY,
-                         -1+2*(x2+.5)/gridSizeX,
-                         +1-2*(y +.5)/gridSizeY,
-                         -1+2*(x2+.5)/gridSizeX,
-                         +1-2*(y2+.5)/gridSizeY
-                         ];
+        var medCoords = [x, y, x, y2, x2, y, x2, y2];
         var colors = [ z,z,z2,z2, z,b,z2,d, a,z,c,z2, a,b,c,d ];
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
@@ -720,6 +714,7 @@ var sim;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramMode.colorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramMode);
         gl.enableVertexAttribArray(shaderProgramMode.vertexPositionAttribute);
         gl.enableVertexAttribArray(shaderProgramMode.colorAttribute);
@@ -743,18 +738,12 @@ var sim;
 //        console("draw triangle " + m);
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, m, 1.0);
 
-        var medCoords = [
-                         -1+2*(x +.5)/gridSizeX,
-                         +1-2*(y +.5)/gridSizeY,
-                         -1+2*(x2+.5)/gridSizeX,
-                         +1-2*(y2+.5)/gridSizeY,
-                         -1+2*(x3+.5)/gridSizeX,
-                         +1-2*(y3+.5)/gridSizeY
-                         ];
+        var medCoords = [x, y, x2, y2, x3, y3];
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(medCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+        loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 3);
