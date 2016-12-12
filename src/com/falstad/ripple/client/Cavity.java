@@ -8,4 +8,7 @@ public class Cavity extends RectDragObject {
 		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
 	}
 
+	@Override void drawSelection() {
+		prepare();
+	}
 }

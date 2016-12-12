@@ -437,22 +437,39 @@ var sim;
     }
 
     function loadMatrix(mtx) {
-    	mtx[0] = +2/gridSizeX;
-    	mtx[5] = -2/gridSizeY;
-    	mtx[12] = -1 + .5*mtx[0];
-    	mtx[13] = +1 + .5*mtx[5];
+    	mat4.identity(mtx);
+    	if (sim.drawingSelection > 0) {
+        	mtx[0] = +2/windowWidth;
+        	mtx[5] = -2/windowHeight;
+        	mtx[12] = -1 + (.5-windowOffsetX)*mtx[0];
+        	mtx[13] = +1 + (.5-windowOffsetY)*mtx[5];
+    	} else {
+        	mtx[0] = +2/gridSizeX;
+        	mtx[5] = -2/gridSizeY;
+        	mtx[12] = -1 + .5*mtx[0];
+        	mtx[13] = +1 + .5*mtx[5];
+    	}
+//    	mat4.translate(mtx, [75, 75, 0], mtx);
+//    	mat4.rotateZ(mtx, Math.PI/3, mtx);
+//    	mat4.translate(mtx, [-75, -75, 0], mtx);
     }
 
+    function setupForDrawing(v) {
+        if (sim.drawingSelection > 0) {
+    		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection,
+    				sim.drawingSelection, 0, 1.0);
+        } else {
+    		var rttFramebuffer = renderTexture1.framebuffer;
+    		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+    		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+            gl.useProgram(shaderProgramDraw);
+    		gl.colorMask(false, false, true, false);
+    		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
+    	}
+    }
+    
     function drawWall(x, y, x2, y2, v) {
-		var rttFramebuffer = renderTexture1.framebuffer;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(false, false, true, false);
-//		gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
-
+    	setupForDrawing(v);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = x;
         srcCoords[1] = y;
@@ -516,15 +533,7 @@ var sim;
     }
 
     function drawEllipse(cx, cy, xr, yr) {
-		var rttFramebuffer = renderTexture1.framebuffer;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(false, false, true, false);
-//		gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
-
+    	setupForDrawing(0);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [];
         var i;
@@ -551,15 +560,7 @@ var sim;
     }
 
     function drawParabola(x1, y1, w, h) {
-		var rttFramebuffer = renderTexture1.framebuffer;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(false, false, true, false);
-//		gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
-
+    	setupForDrawing(0);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [];
         var i;
@@ -586,15 +587,7 @@ var sim;
     }
 
     function drawLens(x1, y1, w, h, m) {
-		var rttFramebuffer = renderTexture1.framebuffer;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(false, false, true, false);
-//		gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, m, 1.0);
-
+    	setupForDrawing(m);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var i;
         var w2 = w/2;
@@ -622,15 +615,7 @@ var sim;
     }
     
     function drawSolidEllipse(cx, cy, xr, yr, med) {
-		var rttFramebuffer = renderTexture1.framebuffer;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(false, false, true, false);
-//		gl.clear(gl.COLOR_BUFFER_BIT);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, med, 1.0);
-
+    	setupForDrawing(med);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var coords = [cx, cy];
         var i;
@@ -892,6 +877,7 @@ var sim;
 			colors.push(((arg>>16)&0xff)/255, ((arg>>8)&0xff)/255, (arg&0xff)/255);
 		}
 	}
+	sim.drawingSelection = -1;
 
 }
 

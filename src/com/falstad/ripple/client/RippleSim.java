@@ -317,7 +317,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawLens(x1, y1, w, h, med);
 	}-*/;
 
-
+	static native void setDrawingSelection(double ds) /*-{
+		this.drawingSelection = ds;
+	}-*/;
+	
 	static native void drawSolidEllipse(int x1, int y1, int rx, int ry, double med) /*-{
 		this.drawSolidEllipse(x1, y1, rx, ry, med);
 	}-*/;
@@ -814,8 +817,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //			console("total time = " + (System.currentTimeMillis()-time));
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult);
+			setDrawingSelection(.6+.4*Math.sin(t));
 			for (i = 0; i != dragObjects.size(); i++)
 				dragObjects.get(i).draw();
+			setDrawingSelection(-1);
 			return;
 		}
 		

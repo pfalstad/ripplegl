@@ -24,4 +24,10 @@ public class MediumEllipse extends MediumBox {
 		double ht = Math.sqrt(x*x/(a*a)+y*y/(b*b));
 		return ht <= 1;
 	}
+	
+	@Override void drawSelection() {
+		RippleSim.drawEllipse(
+				(topLeft.x+topRight.x)/2, (topLeft.y+bottomLeft.y)/2,
+				(topRight.x-topLeft.x)/2, (bottomLeft.y-topLeft.y)/2);
+	}
 }

@@ -18,5 +18,8 @@ public class Ellipse extends RectDragObject {
 		sim.console("hit test " + ht);
 		return ht;
 	}
-
+	
+	@Override void drawSelection() {
+		prepare();
+	}
 }

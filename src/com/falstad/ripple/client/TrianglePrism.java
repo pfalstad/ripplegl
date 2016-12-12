@@ -7,4 +7,10 @@ public class TrianglePrism extends MediumBox {
 				speedIndex);
 	}
 
+	@Override void drawSelection() {
+		RippleSim.drawWall(topLeft.x, topLeft.y, topRight.x, topRight.y);
+		RippleSim.drawWall(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y); 
+		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+	}
+	
 }

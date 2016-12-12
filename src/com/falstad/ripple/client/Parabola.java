@@ -5,4 +5,7 @@ public class Parabola extends RectDragObject {
 		RippleSim.drawParabola(topLeft.x, topLeft.y, width(), height());
 	}
 
+	@Override void drawSelection() {
+		prepare();
+	}
 }

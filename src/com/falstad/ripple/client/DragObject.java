@@ -36,6 +36,10 @@ public class DragObject implements Editable {
 			DragHandle dh = handles.get(i);
 			RippleSim.drawHandle(dh.x-sim.windowOffsetX, dh.y-sim.windowOffsetY);
 		}
+		drawSelection();
+	}
+	
+	void drawSelection() {
 	}
 	
 	static double hypotf(double x, double y) {

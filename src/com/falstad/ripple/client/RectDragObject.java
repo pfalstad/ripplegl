@@ -104,4 +104,11 @@ public class RectDragObject extends DragObject {
 		bottomRight.x = topRight.x = start.x + start.width;
 		bottomRight.y = bottomLeft.y = start.y + start.height;
 	}
+	
+	@Override void drawSelection() {
+		RippleSim.drawWall(topLeft.x, topLeft.y, topRight.x, topRight.y);
+		RippleSim.drawWall(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y); 
+		RippleSim.drawWall(bottomRight.x, bottomRight.y, topRight.x, topRight.y);
+		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
+	}
 }
