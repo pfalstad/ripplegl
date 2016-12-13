@@ -471,10 +471,13 @@ var sim;
     function drawWall(x, y, x2, y2, v) {
     	setupForDrawing(v);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        // draw line back on itself, or else one endpoint won't be drawn
         srcCoords[0] = x;
         srcCoords[1] = y;
         srcCoords[2] = x2;
         srcCoords[3] = y2;
+        srcCoords[4] = x;
+        srcCoords[5] = y;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -482,7 +485,7 @@ var sim;
         setMatrixUniforms(shaderProgramDraw);
         gl.lineWidth(3);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.drawArrays(gl.LINES, 0, 2);
+        gl.drawArrays(gl.LINE_STRIP, 0, 3);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.lineWidth(1);
 

@@ -817,7 +817,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //			console("total time = " + (System.currentTimeMillis()-time));
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult);
-			setDrawingSelection(.6+.4*Math.sin(t));
+			setDrawingSelection(.6+.4*Math.sin(t*.2));
 			for (i = 0; i != dragObjects.size(); i++)
 				dragObjects.get(i).draw();
 			setDrawingSelection(-1);
@@ -4772,7 +4772,48 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 	
 	Rectangle findSpace(DragObject obj, int sx, int sy) {
-		return new Rectangle(gridSizeX/2, gridSizeY/2, sx, sy);
+		int spsize = 20;
+		boolean spacegrid[][] = new boolean[spsize][spsize];
+		int i;
+		int jx, jy;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject d = dragObjects.get(i);
+			Rectangle r = d.boundingBox();
+			for (jx = r.x*spsize/gridSizeX; jx <= (r.x+r.width)*spsize/gridSizeX; jx++)
+				for (jy = r.y*spsize/gridSizeY; jy <= (r.y+r.height)*spsize/gridSizeY; jy++) {
+					if (jx >= 0 && jy >= 0 && jx < spsize && jy < spsize) {
+						spacegrid[jx][jy] = true;
+					}
+				}
+		}
+        int spiralIndex = 1, spiralCounter = 1;
+        int tx = spsize/2;
+        int ty = spsize/2;
+        int dx = 1;
+        int dy = 0;
+        while (true) {
+        	if (!spacegrid[tx][ty]) {
+        		return new Rectangle(tx*gridSizeX/spsize+2, ty*gridSizeY/spsize+2,
+        				gridSizeX/spsize-4,
+        				gridSizeY/spsize-4);
+        	}
+        	tx += dx;
+        	ty += dy;
+            if (--spiralIndex == 0) {
+                int d0 = dx;
+                dx = dy;
+                dy = -d0;
+                if (dy == 0) spiralCounter++;
+                spiralIndex = spiralCounter;
+            }
+            int tx0 = tx*gridSizeX/spsize;
+            int ty0 = ty*gridSizeY/spsize;
+            if (tx0 < windowOffsetX || ty0 < windowOffsetY ||
+            	tx0+spsize > gridSizeX-windowOffsetX ||
+            	ty0+spsize > gridSizeY-windowOffsetY)
+            	break;
+        }
+		return new Rectangle(gridSizeX/2, gridSizeY/2, spsize, spsize);
 	}
 	
 	@Override

@@ -26,6 +26,8 @@ public class Rectangle {
         this(r.x, r.y, r.width, r.height);
     }
     
+    public String toString() { return "Rect(" + x + "," + y + "," + width + "," + height + ")"; }
+
     public void setBounds(int x, int y, int width, int height) {
         this.x = x;
         this.y = y;

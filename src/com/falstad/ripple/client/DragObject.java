@@ -112,7 +112,7 @@ public class DragObject implements Editable {
 		int minx = 10000, miny = 10000, maxx = -10000, maxy = -10000;
 		int i;
 		for (i = 0; i != handles.size(); i++) {
-			DragHandle dh = handles.get(0);
+			DragHandle dh = handles.get(i);
             if (dh.x < minx)
                 minx = dh.x;
         if (dh.y < miny)
