@@ -15,6 +15,7 @@ public class MovingWall extends RectDragObject {
 	}
 	
 	void run() {
+        RippleSim.setTransform(transform[0], transform[1], transform[2], transform[3], transform[4], transform[5]);
 		RippleSim.clearWall(lastWallX1, lastWallY1, lastWallX2, lastWallY2);
 		int x1 = topLeft.x;
 		int x2 = topRight.x;
@@ -42,6 +43,7 @@ public class MovingWall extends RectDragObject {
 		lastWallX2 = x2;
 		lastWallY2 = y;
 		RippleSim.drawWall(x1, y, x2, y);
+		RippleSim.setTransform(1,0,0,0,1,0);
 	}
 	
     public EditInfo getEditInfo(int n) {

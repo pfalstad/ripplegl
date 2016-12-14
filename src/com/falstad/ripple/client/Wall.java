@@ -5,6 +5,7 @@ public class Wall extends DragObject {
 	Wall() {
 		handles.add(new DragHandle(this));
 		handles.add(new DragHandle(this));
+		setTransform();
 	}
 	
 	Wall(int x1, int y1, int x2, int y2) {

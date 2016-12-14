@@ -4,6 +4,7 @@ var canvas;
 var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
 var windowWidth, windowHeight;
 var sim;
+var transform = [1, 0, 0, 1, 0, 0];
 
     function getShader(gl, id, prefix) {
         var shaderScript = document.getElementById(id);
@@ -436,6 +437,41 @@ var sim;
         //mvPopMatrix();
     }
 
+    function drawPhasedArray(x, y, x2, y2, f1, f2) {
+        var rttFramebuffer = renderTexture1.framebuffer;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+        gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+        gl.colorMask(true, true, false, false);
+//      gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(shaderProgramMode);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        srcCoords[0] = x;
+        srcCoords[1] = y;
+        srcCoords[2] = x2;
+        srcCoords[3] = y2;
+        var colors = [f1, Math.PI/2, 0, 0, f2, Math.PI/2, 0, 0];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramMode.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramMode.colorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        loadMatrix(pMatrix);
+        setMatrixUniforms(shaderProgramMode);
+        gl.enableVertexAttribArray(shaderProgramMode.vertexPositionAttribute);
+        gl.enableVertexAttribArray(shaderProgramMode.colorAttribute);
+        gl.drawArrays(gl.LINES, 0, 2);
+        gl.disableVertexAttribArray(shaderProgramMode.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramMode.colorAttribute);
+
+        gl.colorMask(true, true, true, true);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        //mvPopMatrix();
+    }
+
     function loadMatrix(mtx) {
     	mat4.identity(mtx);
     	if (sim.drawingSelection > 0) {
@@ -449,6 +485,11 @@ var sim;
         	mtx[12] = -1 + .5*mtx[0];
         	mtx[13] = +1 + .5*mtx[5];
     	}
+//    	transform[2] = transform[5] = 1;
+    	mat4.multiply(mtx, [transform[0], transform[3], 0, 0,
+    	                    transform[1], transform[4], 0, 0,
+    	                    0,0,1,0,
+    	                    transform[2], transform[5], 0, 1], mtx);
 //    	mat4.translate(mtx, [75, 75, 0], mtx);
 //    	mat4.rotateZ(mtx, Math.PI/3, mtx);
 //    	mat4.translate(mtx, [-75, -75, 0], mtx);
@@ -844,6 +885,7 @@ var sim;
     	}
     	sim.drawSource = function (x, y, f) { drawSource(x, y, f); }
     	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
+    	sim.drawPhasedArray = function (x, y, x2, y2, f1, f2) { drawPhasedArray(x, y, x2, y2, f1, f2); }
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
     	sim.drawPoke = function (x, y) { drawPoke(x, y); }
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 0); }
@@ -855,6 +897,11 @@ var sim;
     	sim.drawMedium = function (x, y, x2, y2, x3, y3, x4, y4, m, m2) { drawMedium(x, y, x2, y2, x3, y3, x4, y4, m, m2); }
     	sim.drawTriangle = function (x, y, x2, y2, x3, y3, m) { drawTriangle(x, y, x2, y2, x3, y3, m); }
     	sim.drawModes = function (x, y, x2, y2, a, b, c, d) { drawModes(x, y, x2, y2, a, b, c, d); }
+    	sim.setTransform = function (a, b, c, d, e, f) {
+    		transform[0] = a; transform[1] = b;
+    		transform[2] = c; transform[3] = d;
+    		transform[4] = e; transform[5] = f;
+    	}
     	sim.doBlank = function () {
     		var rttFramebuffer = renderTexture1.framebuffer;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);

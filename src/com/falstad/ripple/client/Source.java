@@ -14,6 +14,7 @@ public class Source extends DragObject {
 		frequency = .5;
 		length = 10;
 		delay = 100;
+		setTransform();
 	}
 	
 	double getValue() {

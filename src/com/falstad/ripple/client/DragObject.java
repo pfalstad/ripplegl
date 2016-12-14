@@ -6,17 +6,48 @@ public class DragObject implements Editable {
 	Vector<DragHandle> handles;
 	boolean selected;
 	RippleSim sim;
+	double rotation;
+	double transform[];
+	double invTransform[];
 	
 	DragObject() {
 		handles = new Vector<DragHandle>(4);
 		sim = RippleSim.theSim;
 		sim.changedWalls = true;
+		setTransform();
 	}
 	
 	void prepare() {}
 	void select() { selected = true; }
 	void deselect() { selected = false; }
 	void run() {}
+	void setTransform() {
+		if (transform == null) {
+			transform = new double[6];
+			invTransform = new double[6];
+		}
+		int i;
+		double cx = 0, cy = 0;
+		for (i = 0; i != handles.size(); i++) {
+			DragHandle dh = handles.get(i);
+			cx += dh.x;
+			cy += dh.y;
+		}
+		cx /= handles.size();
+		cy /= handles.size();
+		
+		// make translation-rotation-translation matrix
+		transform[0] = transform[4] = Math.cos(rotation);
+		transform[1] = Math.sin(rotation);
+		transform[3] = -transform[1];
+		transform[2] = (1-transform[0])*cx - transform[1]*cy;
+		transform[5] = -transform[3]*cx + (1-transform[4])*cy;
+		invTransform[0] = invTransform[4] = transform[0];
+		invTransform[1] = transform[3];
+		invTransform[3] = transform[1];
+		invTransform[2] = (1-transform[0])*cx + transform[1]*cy;
+		invTransform[5] = transform[3]*cx + (1-transform[4])*cy;
+	}
 	
 	boolean drag(int dx, int dy) {
 		int i;
@@ -25,6 +56,7 @@ public class DragObject implements Editable {
 			dh.x += dx;
 			dh.y += dy;
 		}
+		setTransform();
 		return true;
 	}
 	
@@ -34,12 +66,29 @@ public class DragObject implements Editable {
 		int i;
 		for (i = 0; i != handles.size(); i++) {
 			DragHandle dh = handles.get(i);
-			RippleSim.drawHandle(dh.x-sim.windowOffsetX, dh.y-sim.windowOffsetY);
+			int x = (int) (dh.x*transform[0]+dh.y*transform[1]+transform[2]);
+			int y = (int) (dh.x*transform[3]+dh.y*transform[4]+transform[5]);
+			RippleSim.drawHandle(x-sim.windowOffsetX, y-sim.windowOffsetY);
 		}
 		drawSelection();
 	}
 	
+	Point transformPoint(Point p) {
+		int x = (int) (p.x*transform[0]+p.y*transform[1]+transform[2]);
+		int y = (int) (p.x*transform[3]+p.y*transform[4]+transform[5]);
+		return new Point(x, y);
+	}
+
+	Point inverseTransformPoint(Point p) {
+		int x = (int) (p.x*invTransform[0]+p.y*invTransform[1]+invTransform[2]);
+		int y = (int) (p.x*invTransform[3]+p.y*invTransform[4]+invTransform[5]);
+		return new Point(x, y);
+	}
+
 	void drawSelection() {
+	}
+	
+	void rotate(double ang) {
 	}
 	
 	static double hypotf(double x, double y) {
@@ -113,14 +162,15 @@ public class DragObject implements Editable {
 		int i;
 		for (i = 0; i != handles.size(); i++) {
 			DragHandle dh = handles.get(i);
-            if (dh.x < minx)
-                minx = dh.x;
-        if (dh.y < miny)
-                miny = dh.y;
-        if (dh.x > maxx)
-                maxx = dh.x;
-        if (dh.y > maxy)
-                maxy = dh.y;
+			Point p = transformPoint(new Point(dh.x, dh.y));
+            if (p.x < minx)
+                minx = p.x;
+        if (p.y < miny)
+                miny = p.y;
+        if (p.x > maxx)
+                maxx = p.x;
+        if (p.y > maxy)
+                maxy = p.y;
 		}
 		return new Rectangle(minx, miny, maxx-minx, maxy-miny);
 	}

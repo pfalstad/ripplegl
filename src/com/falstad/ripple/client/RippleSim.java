@@ -296,7 +296,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	static native void drawLineSource(int x1, int y1, int x2, int y2, double value) /*-{
 		this.drawLineSource(x1, y1, x2, y2, value);
 	}-*/;
-	
+
+	static native void drawPhasedArray(int x1, int y1, int x2, int y2, double w1, double w2) /*-{
+		this.drawPhasedArray(x1, y1, x2, y2, w1, w2);
+	}-*/;
+
 	static native void drawWall(int x1, int y1, int x2, int y2) /*-{
 		this.drawWall(x1, y1, x2, y2);
 	}-*/;
@@ -320,7 +324,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	static native void setDrawingSelection(double ds) /*-{
 		this.drawingSelection = ds;
 	}-*/;
-	
+
+	static native void setTransform(double a, double b, double c, double d, double e, double f) /*-{
+		this.setTransform(a, b, c, d, e, f);
+	}-*/;
+
 	static native void drawSolidEllipse(int x1, int y1, int rx, int ry, double med) /*-{
 		this.drawSolidEllipse(x1, y1, rx, ry, med);
 	}-*/;
@@ -446,11 +454,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(fixedEndsCheck = new Checkbox("Fixed Edges"));
 		verticalPanel.add(view3dCheck = new Checkbox("3-D View"));
 
-		int res = 110;
+		int res = 512;
 		verticalPanel.add(new Label("Simulation Speed"));
 		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 8, 1, 1, 30));
 		verticalPanel.add(new Label("Resolution"));
-		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 5, 1024));
+		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 256, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
 		verticalPanel.add(new Label("Damping"));
@@ -511,6 +519,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		cv.addMouseDownHandler(this);
 		cv.addMouseOutHandler(this);
 		cv.addMouseUpHandler(this);
+        cv.addMouseWheelHandler(this);
 		cv.addDomHandler(this,  ContextMenuEvent.getType());
 		
 		reinit();
@@ -528,6 +537,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Box", "Box"));
     	mainMenuBar.addItem(getClassCheckItem("Add Source", "Source"));
     	mainMenuBar.addItem(getClassCheckItem("Add Line Source", "LineSource"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Phased Array Source", "PhasedArraySource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Solid Box", "SolidBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Moving Wall", "MovingWall"));
     	mainMenuBar.addItem(getClassCheckItem("Add Moving Source", "MovingSource"));
@@ -551,6 +561,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     }
     
     public void menuPerformed(String menu, String item) {
+    	if (contextPanel != null)
+    		contextPanel.hide();
     	if (item == "delete") {
     		if (selectedObject != null) {
     			dragObjects.remove(selectedObject);
@@ -593,6 +605,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new Source();
     	if (item == "LineSource")
     		newObject = new LineSource();
+    	if (item == "PhasedArraySource")
+    		newObject = new PhasedArraySource();
     	if (newObject != null) {
     		newObject.setInitialPosition();
     		dragObjects.add(newObject);
@@ -787,8 +801,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	void drawWalls() {
 		doBlankWalls();
 		int i;
-		for (i = 0; i != dragObjects.size(); i++)
-			dragObjects.get(i).prepare();
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			double xform[] = obj.transform;
+			setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
+			obj.prepare();
+		}
+		setTransform(1, 0, 0, 0, 1, 0);
 	}
 	
 	public void updateRipple() {
@@ -818,8 +837,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult);
 			setDrawingSelection(.6+.4*Math.sin(t*.2));
-			for (i = 0; i != dragObjects.size(); i++)
-				dragObjects.get(i).draw();
+			for (i = 0; i != dragObjects.size(); i++) {
+				DragObject obj = dragObjects.get(i);
+				double xform[] = obj.transform;
+				setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
+				obj.draw();
+			}
+			setTransform(1, 0, 0, 0, 1, 0);
 			setDrawingSelection(-1);
 			return;
 		}
@@ -4603,7 +4627,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
 		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
 		if (draggingHandle != null) {
-			draggingHandle.dragTo(xp, yp);
+			Point mp = selectedObject.inverseTransformPoint(new Point(xp, yp));
+			draggingHandle.dragTo(mp.x, mp.y);
 			changedWalls = true;
 		} else if (selectedObject != null) {
 			int dxp = dragX*windowWidth/winSize.width + windowOffsetX;
@@ -4647,11 +4672,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
 		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
 		draggingHandle = null;
+		Point mp = new Point(xp, yp);
 		if (selectedObject != null) {
 			int i;
+			Point p = selectedObject.inverseTransformPoint(mp);
+			console("transform " + p.x + " " + p.y + " " + mp.x + " " + mp.y);
 			for (i = 0; i != selectedObject.handles.size(); i++) {
 				DragHandle dh = selectedObject.handles.get(i);
-				double r = DragObject.hypotf(xp-dh.x, yp-dh.y);
+				double r = DragObject.hypotf(p.x-dh.x, p.y-dh.y);
 				if (r < bestf) {
 					draggingHandle = dh;
 					bestf = r;
@@ -4666,11 +4694,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		int i;
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject obj = dragObjects.get(i);
-			double ht = obj.hitTest(xp, yp);
+			Point p = obj.inverseTransformPoint(mp);
+			double ht = obj.hitTest(p.x, p.y);
 			
 	        // if there are no better options, select a RectDragObject if we're tapping
 	        // inside it.
-			if (ht > minf && !obj.hitTestInside(xp, yp))
+			if (ht > minf && !obj.hitTestInside(p.x, p.y))
 				continue;
 			
 			// find best match
@@ -4713,8 +4742,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	
 	@Override
 	public void onMouseWheel(MouseWheelEvent event) {
-		// TODO Auto-generated method stub
-
+        event.preventDefault();
+        if (selectedObject != null) {
+        	selectedObject.rotate(event.getDeltaY()* .01);
+        }
 	}
 
 	@Override

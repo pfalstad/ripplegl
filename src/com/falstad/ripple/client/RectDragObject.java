@@ -2,7 +2,6 @@ package com.falstad.ripple.client;
 
 public class RectDragObject extends DragObject {
 	DragHandle topLeft, topRight, bottomLeft, bottomRight;
-	double rotation;
 	
 	RectDragObject() {
 		int i;
@@ -14,8 +13,15 @@ public class RectDragObject extends DragObject {
 		topRight = handles.get(1);
 		bottomRight = handles.get(2);
 		bottomLeft  = handles.get(3);
+		setTransform();
 	}
 	
+	@Override void rotate(double ang) {
+		rotation += ang;
+		setTransform();
+		sim.changedWalls = true;
+	}
+
 	boolean hitTestInside(double x, double y) {
 		Point origin = rotatedOrigin();
 		x -= origin.x;

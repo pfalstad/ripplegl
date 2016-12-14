@@ -36,6 +36,7 @@ public class MovingSource extends Source {
 
         double v = getValue();
         double nstep = 1-step;
+//        sim.console("movingsrc " + v + " " + nstep + " " + dh1.x + " " + dh1.y);
         if (enabled)
         	RippleSim.drawSource((int)(dh1.x*nstep + dh2.x*step),
         						 (int)(dh1.y*nstep + dh2.y*step), v); 
@@ -57,4 +58,9 @@ public class MovingSource extends Source {
             pauseDuration = (int)ei.value;
 		super.setEditValue(n-2, ei);
 	}
+	
+	@Override void drawSelection() {
+		RippleSim.drawWall(handles.get(0).x, handles.get(0).y, handles.get(1).x, handles.get(1).y);
+	}
+
 }

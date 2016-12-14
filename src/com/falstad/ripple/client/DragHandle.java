@@ -21,6 +21,7 @@ public class DragHandle {
 		if (parent.dragHandle(this, xd, yd)) {
 			x = xd;
 			y = yd;
+			parent.setTransform();
 			return true;
 		}
 		return false;

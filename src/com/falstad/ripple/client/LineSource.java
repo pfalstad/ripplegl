@@ -4,6 +4,7 @@ public class LineSource extends Source {
 
 	LineSource() {
 		handles.add(new DragHandle(this));
+		setTransform();
 	}
 	
 	void run() {
@@ -12,6 +13,10 @@ public class LineSource extends Source {
         double v = getValue();
         if (enabled)
         	RippleSim.drawLineSource(dh1.x, dh1.y, dh2.x, dh2.y, v); 
+	}
+
+	@Override void drawSelection() {
+		RippleSim.drawWall(handles.get(0).x, handles.get(0).y, handles.get(1).x, handles.get(1).y);
 	}
 
 }
