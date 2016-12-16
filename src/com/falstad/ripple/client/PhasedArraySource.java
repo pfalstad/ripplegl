@@ -2,6 +2,15 @@ package com.falstad.ripple.client;
 
 public class PhasedArraySource extends LineSource {
 	
+	PhasedArraySource() {}
+	
+	PhasedArraySource(StringTokenizer st) {
+		super(st);
+		phaseShift2 = new Double(st.nextToken()).doubleValue();
+	}
+	
+	String dump() { return super.dump() + " " + phaseShift2; }
+	
 	double phaseShift2;
 	
 	void run() {
@@ -37,5 +46,7 @@ public class PhasedArraySource extends LineSource {
     	if (n == 2)
     		phaseShift2 = ei.value*Math.PI/180;
     }
+
+	int getDumpType() { return 201; }
 
 }

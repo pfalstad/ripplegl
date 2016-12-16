@@ -15,6 +15,12 @@ public class DragHandle {
 		y = ya;
 	}
 
+	DragHandle(DragObject par, StringTokenizer st) {
+		parent = par;
+		x = new Integer(st.nextToken()).intValue();
+		y = new Integer(st.nextToken()).intValue();
+	}
+	
 	public String toString() { return "DragHandle(" + x + "," + y + ")"; }
 	
 	boolean dragTo(int xd, int yd) {

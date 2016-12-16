@@ -17,6 +17,23 @@ public class Source extends DragObject {
 		setTransform();
 	}
 	
+	Source(StringTokenizer st, int ct) {
+		super(st);
+		while (ct-- > 0)
+			handles.add(new DragHandle(this, st));
+		waveform = new Integer(st.nextToken()).intValue();
+		frequency = new Double(st.nextToken()).doubleValue();
+		phaseShift = new Double(st.nextToken()).doubleValue();
+		length = new Double(st.nextToken()).doubleValue();
+		delay = new Double(st.nextToken()).doubleValue();
+		setTransform();
+	}
+	
+	String dump() {
+		return super.dump() + " " + waveform + " " + frequency + " " + phaseShift + " " + length + " " +
+					delay;
+	}
+	
 	double getValue() {
 		enabled = true;
 		if (waveform == WF_SINE) {
@@ -94,4 +111,7 @@ public class Source extends DragObject {
     			frequency = ei.value;
     	}
     }
+    
+	int getDumpType() { return 's'; }
+
 }

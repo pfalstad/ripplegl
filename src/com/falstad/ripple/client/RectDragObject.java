@@ -1,6 +1,6 @@
 package com.falstad.ripple.client;
 
-public class RectDragObject extends DragObject {
+public abstract class RectDragObject extends DragObject {
 	DragHandle topLeft, topRight, bottomLeft, bottomRight;
 	
 	RectDragObject() {
@@ -16,12 +16,24 @@ public class RectDragObject extends DragObject {
 		setTransform();
 	}
 	
-	@Override void rotate(double ang) {
-		rotation += ang;
+	RectDragObject(StringTokenizer st) {
+		super(st);
+		topLeft = new DragHandle(this, st);
+		bottomRight = new DragHandle(this, st);
+		topRight = new DragHandle(this, bottomRight.x, topLeft.y);
+		bottomLeft = new DragHandle(this, topLeft.x, bottomRight.y);
+		handles.add(topLeft);
+		handles.add(topRight);
+		handles.add(bottomRight);
+		handles.add(bottomLeft);
+		rotation = new Double(st.nextToken()).doubleValue();
 		setTransform();
-		sim.changedWalls = true;
 	}
-
+	
+	String dump() {
+		return super.dump() + " " + rotation;
+	}
+	
 	boolean hitTestInside(double x, double y) {
 		Point origin = rotatedOrigin();
 		x -= origin.x;
@@ -99,6 +111,8 @@ public class RectDragObject extends DragObject {
 		return result;
 	}
 	
+	@Override boolean canRotate() { return true; }
+
 	int width() { return topRight.x-topLeft.x; }
 	int height() { return bottomLeft.y-topLeft.y; }
 	Point rotatedOrigin() { return new Point(topLeft.x, topLeft.y); }
@@ -117,4 +131,9 @@ public class RectDragObject extends DragObject {
 		RippleSim.drawWall(bottomRight.x, bottomRight.y, topRight.x, topRight.y);
 		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
 	}
+	
+	String dumpHandles() {
+		return " " + topLeft.x + " " + topLeft.y + " " + bottomRight.x + " " + bottomRight.y;
+	}
+
 }

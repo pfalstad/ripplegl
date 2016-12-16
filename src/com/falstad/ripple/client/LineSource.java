@@ -6,6 +6,10 @@ public class LineSource extends Source {
 		handles.add(new DragHandle(this));
 		setTransform();
 	}
+	LineSource(StringTokenizer st) {
+		super(st, 2);
+		setTransform();
+	}
 	
 	void run() {
 		DragHandle dh1 = handles.get(0);
@@ -18,5 +22,7 @@ public class LineSource extends Source {
 	@Override void drawSelection() {
 		RippleSim.drawWall(handles.get(0).x, handles.get(0).y, handles.get(1).x, handles.get(1).y);
 	}
+
+	int getDumpType() { return 'S'; }
 
 }

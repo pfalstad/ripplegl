@@ -1,6 +1,10 @@
 package com.falstad.ripple.client;
 
 public class TrianglePrism extends MediumBox {
+	
+	TrianglePrism() {}
+	TrianglePrism(StringTokenizer st) { super(st); }
+	
 	void prepare() {
 		RippleSim.drawTriangle(topLeft.x, topLeft.y, topRight.x, topRight.y, 
 				bottomLeft.x, bottomLeft.y,
@@ -13,4 +17,6 @@ public class TrianglePrism extends MediumBox {
 		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
 	}
 	
+	int getDumpType() { return 't'; }
+
 }

@@ -13,6 +13,14 @@ public class MovingSource extends Source {
         phase = 0;
     }
 
+    MovingSource(StringTokenizer st) {
+    	super(st, 2);
+    	moveDuration = new Integer(st.nextToken()).intValue();
+    	pauseDuration = new Integer(st.nextToken()).intValue();
+    }
+
+    String dump() { return super.dump() + " " + moveDuration + " " + pauseDuration; }
+    
     void run() {
         DragHandle dh1 = handles.get(0);
         DragHandle dh2 = handles.get(1);
@@ -62,5 +70,7 @@ public class MovingSource extends Source {
 	@Override void drawSelection() {
 		RippleSim.drawWall(handles.get(0).x, handles.get(0).y, handles.get(1).x, handles.get(1).y);
 	}
+
+	int getDumpType() { return 'd'; }
 
 }

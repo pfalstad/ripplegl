@@ -71,5 +71,14 @@ public class ModeBox extends RectDragObject {
         	box = ei.checkbox.getState();
     }
 
-
+    ModeBox(StringTokenizer st) {
+    	super(st);
+    	xmode = new Integer(st.nextToken()).intValue();
+    	ymode = new Integer(st.nextToken()).intValue();
+    	randomize = new Boolean(st.nextToken()).booleanValue();
+    	box = new Boolean(st.nextToken()).booleanValue();
+    }
+	String dump() { return super.dump() + " " + xmode + " " + ymode + " " + randomize + " " + box; }
+	
+	int getDumpType() { return 'M'; }
 }

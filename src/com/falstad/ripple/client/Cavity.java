@@ -2,6 +2,9 @@ package com.falstad.ripple.client;
 
 public class Cavity extends RectDragObject {
 
+	Cavity() {}
+	Cavity(StringTokenizer st) { super(st); }
+	
 	void prepare() {
 		RippleSim.drawWall(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y); 
 		RippleSim.drawWall(bottomRight.x, bottomRight.y, topRight.x, topRight.y);
@@ -11,4 +14,6 @@ public class Cavity extends RectDragObject {
 	@Override void drawSelection() {
 		prepare();
 	}
+	
+	int getDumpType() { return 'c'; }
 }

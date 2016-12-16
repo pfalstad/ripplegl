@@ -2,13 +2,15 @@ package com.falstad.ripple.client;
 
 import java.util.Vector;
 
-public class DragObject implements Editable {
+public abstract class DragObject implements Editable {
 	Vector<DragHandle> handles;
 	boolean selected;
 	RippleSim sim;
 	double rotation;
 	double transform[];
 	double invTransform[];
+	double centerX, centerY;  // set in setTransform()
+	int flags;
 	
 	DragObject() {
 		handles = new Vector<DragHandle>(4);
@@ -17,6 +19,13 @@ public class DragObject implements Editable {
 		setTransform();
 	}
 	
+	DragObject(StringTokenizer st) {
+		handles = new Vector<DragHandle>(4);
+		sim = RippleSim.theSim;
+		sim.changedWalls = true;
+		flags = new Integer(st.nextToken()).intValue();
+	}
+
 	void prepare() {}
 	void select() { selected = true; }
 	void deselect() { selected = false; }
@@ -35,6 +44,8 @@ public class DragObject implements Editable {
 		}
 		cx /= handles.size();
 		cy /= handles.size();
+		centerX = cx;
+		centerY = cy;
 		
 		// make translation-rotation-translation matrix
 		transform[0] = transform[4] = Math.cos(rotation);
@@ -89,7 +100,19 @@ public class DragObject implements Editable {
 	}
 	
 	void rotate(double ang) {
+		rotation += ang;
+		setTransform();
+		sim.changedWalls = true;
 	}
+
+	void rotateTo(int x, int y) {
+//		sim.console("rotateto " + x + " " + y + " " + centerX + " " + centerY);
+		rotation = Math.atan2(-y+centerY, x-centerX)-Math.PI/2;
+		setTransform();
+		sim.changedWalls = true;
+	}
+
+	boolean canRotate() { return false; }
 	
 	static double hypotf(double x, double y) {
 		return Math.sqrt(x*x+y*y);
@@ -173,6 +196,29 @@ public class DragObject implements Editable {
                 maxy = p.y;
 		}
 		return new Rectangle(minx, miny, maxx-minx, maxy-miny);
+	}
+
+	abstract int getDumpType();
+	
+	String dump() {
+		int t = getDumpType();
+		String out;
+		if (t >= 200)
+			out = t + " 0";
+		else
+			out = (char)t + " 0";
+		out += dumpHandles();
+		return out;
+	}
+
+	String dumpHandles() {
+		String out = "";
+		int i;
+		for (i = 0; i != handles.size(); i++) {
+			DragHandle dh = handles.get(i);
+			out += " " + dh.x + " " + dh.y;
+		}
+		return out;
 	}
 
 	@Override

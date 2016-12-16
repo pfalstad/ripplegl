@@ -7,6 +7,11 @@ public class MediumBox extends RectDragObject {
 		speedIndex = .25;
 	}
 	
+	MediumBox(StringTokenizer st) {
+		super(st);
+		speedIndex = new Double(st.nextToken()).doubleValue();
+	}
+	
 	void prepare() {
 		RippleSim.drawMedium(topLeft.x, topLeft.y, topRight.x, topRight.y, 
 				bottomLeft.x, bottomLeft.y,
@@ -25,4 +30,6 @@ public class MediumBox extends RectDragObject {
         	speedIndex = ei.value;
     }
 
+	int getDumpType() { return 'm'; }
+	String dump() { return super.dump() + " " + speedIndex; }
 }

@@ -7,6 +7,12 @@ public class GradientBox extends RectDragObject {
 		speedIndex = .25;
 		speedIndex2 = .5;
 	}
+
+	GradientBox(StringTokenizer st) {
+		super(st);
+		speedIndex  = new Double(st.nextToken()).doubleValue();
+		speedIndex2 = new Double(st.nextToken()).doubleValue();
+	}
 	
 	void prepare() {
 		RippleSim.drawMedium(topLeft.x, topLeft.y, topRight.x, topRight.y, 
@@ -31,4 +37,6 @@ public class GradientBox extends RectDragObject {
         	speedIndex2 = ei.value;
     }
 
+	int getDumpType() { return 'g'; }
+	String dump() { return super.dump() + " " + speedIndex + " " + speedIndex2; }
 }

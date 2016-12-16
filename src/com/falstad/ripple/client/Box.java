@@ -2,6 +2,9 @@ package com.falstad.ripple.client;
 
 public class Box extends RectDragObject {
 
+	Box() {}
+	Box(StringTokenizer st) { super(st); }
+	
 	void prepare() {
 		RippleSim.drawWall(topLeft.x, topLeft.y, topRight.x, topRight.y);
 		RippleSim.drawWall(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y); 
@@ -10,4 +13,6 @@ public class Box extends RectDragObject {
 	}
 
 	boolean hitTestInside(double x, double y) { return false; }
+	
+	int getDumpType() { return 'b'; }
 }

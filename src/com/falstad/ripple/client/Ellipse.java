@@ -1,6 +1,9 @@
 package com.falstad.ripple.client;
 
 public class Ellipse extends RectDragObject {
+	Ellipse(){}
+	Ellipse(StringTokenizer st) { super(st); }
+	
 	void prepare() {
 		RippleSim.drawEllipse(
 				(topLeft.x+topRight.x)/2, (topLeft.y+bottomLeft.y)/2,
@@ -22,4 +25,7 @@ public class Ellipse extends RectDragObject {
 	@Override void drawSelection() {
 		prepare();
 	}
+	
+	int getDumpType() { return 'e'; }
+
 }

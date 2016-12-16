@@ -141,6 +141,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	boolean sourceMoving = false;
 	boolean increaseResolution = false;
 	boolean adjustResolution = true;
+	boolean rotationMode = false;
 	int sourceFreqCount = -1;
 	int sourceWaveform = SWF_SIN;
 	int auxFunction;
@@ -149,6 +150,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	MenuBar elmMenuBar;
     MenuItem elmEditMenuItem;
     MenuItem elmDeleteMenuItem;
+    MenuItem elmRotateMenuItem;
 	Color wallColor, posColor, negColor, zeroColor, medColor, posMedColor,
 			negMedColor, sourceColor;
 	Color schemeColors[][];
@@ -495,6 +497,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //        elmMenuBar.addItem(elmCutMenuItem = new MenuItem("Cut",new MyCommand("elm","cut")));
 //        elmMenuBar.addItem(elmCopyMenuItem = new MenuItem("Copy",new MyCommand("elm","copy")));
         elmMenuBar.addItem(elmDeleteMenuItem = new MenuItem("Delete",new MyCommand("elm","delete")));
+        elmMenuBar.addItem(elmRotateMenuItem = new MenuItem("Rotate",new MyCommand("elm","rotate")));
 //        elmMenuBar.addItem(                    new MenuItem("Duplicate",new MyCommand("elm","duplicate")));
 
 //		winSize = new Dimension(256, 256);
@@ -534,9 +537,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
     public void composeMainMenu(MenuBar mainMenuBar) {
     	mainMenuBar.addItem(getClassCheckItem("Add Wall", "Wall"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Slit", "Slit"));
     	mainMenuBar.addItem(getClassCheckItem("Add Box", "Box"));
     	mainMenuBar.addItem(getClassCheckItem("Add Source", "Source"));
     	mainMenuBar.addItem(getClassCheckItem("Add Line Source", "LineSource"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Multipole Source", "MultipoleSource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Phased Array Source", "PhasedArraySource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Solid Box", "SolidBox"));
     	mainMenuBar.addItem(getClassCheckItem("Add Moving Wall", "MovingWall"));
@@ -572,6 +577,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	}
     	if (item == "edit")
     		doEdit(selectedObject);
+    	if (item == "rotate" && selectedObject != null && selectedObject.canRotate())
+    		rotationMode = true;
     	DragObject newObject = null;
     	if (item == "Wall")
     		newObject = new Wall();
@@ -607,13 +614,40 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new LineSource();
     	if (item == "PhasedArraySource")
     		newObject = new PhasedArraySource();
+    	if (item == "MultipoleSource")
+    		newObject = new MultipoleSource();
+    	if (item == "Slit")
+    		newObject = new Slit();
     	if (newObject != null) {
     		newObject.setInitialPosition();
     		dragObjects.add(newObject);
     		setSelectedObject(newObject);
     	}
-}
+    }
 
+    DragObject createObj(int tint, StringTokenizer st) {
+    	if (tint == 'b') return new Box(st);
+    	if (tint == 'c') return new Cavity(st);
+    	if (tint == 'e') return new Ellipse(st);
+    	if (tint == 'g') return new GradientBox(st);
+    	if (tint == 'l') return new Lens(st);
+    	if (tint == 'S') return new LineSource(st);
+    	if (tint == 'm') return new MediumBox(st);
+    	if (tint == 'E') return new MediumEllipse(st);
+    	if (tint == 'M') return new ModeBox(st);
+    	if (tint == 'd') return new MovingSource(st);
+    	if (tint == 'W') return new MovingWall(st);
+    	if (tint == 200) return new MultipoleSource(st);
+    	if (tint == 'p') return new Parabola(st);
+    	if (tint == 201) return new PhasedArraySource(st);
+    	if (tint == 203) return new Slit(st);
+    	if (tint == 202) return new SolidBox(st);
+    	if (tint == 's') return new Source(st, 1);
+    	if (tint == 't') return new TrianglePrism(st);
+    	if (tint == 'w') return new Wall(st);
+    	return null;
+    }
+    
 	void calcExceptions() {
 		int x, y;
 		// if walls are in place on border, need to extend that through
@@ -2106,27 +2140,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				+ fixedEndsCheck.getState() + " " + view3dCheck.getState()
 				+ " " + speedBar.getValue() + " " + freqBar.getValue() + " "
 				+ brightnessBar.getValue() + " " + auxBar.getValue() + "\n";
-		for (i = 0; i != sourceCount; i++) {
+/*		for (i = 0; i != sourceCount; i++) {
 			OscSource src = sources[i];
 			dump += "s " + src.x + " " + src.y + "\n";
-		}
-		for (i = 0; i != gridSizeXY;) {
-			if (i >= gridSizeX) {
-				int istart = i;
-				for (; i < gridSizeXY && walls[i] == walls[i - gridSizeX]
-						&& medium[i] == medium[i - gridSizeX]; i++)
-					;
-				if (i > istart) {
-					dump += "l " + (i - istart) + "\n";
-					continue;
-				}
-			}
-			boolean x = walls[i];
-			int m = medium[i];
-			int ct = 0;
-			for (; i < gridSizeXY && walls[i] == x && medium[i] == m; ct++, i++)
-				;
-			dump += (x ? "w " : "c ") + ct + " " + m + "\n";
+		}*/
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			dump += obj.dump() + "\n";
 		}
 		DialogBox dial = new DialogBox();
 		
@@ -2138,6 +2158,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	void readImport(String s) {
 		doBlank();
+		deleteAllObjects();
 		char b[] = new char[s.length()];
 		s.getChars(0, s.length(), b, 0);
 		int len = s.length();
@@ -2189,34 +2210,18 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 						auxBar.setValue(new Integer(st.nextToken()).intValue());
 						break;
 					}
-					if (tint == 'w' || tint == 'c') {
-						boolean w = (tint == 'w');
-						int ct = new Integer(st.nextToken()).intValue();
-						int md = new Integer(st.nextToken()).intValue();
-						for (; ct > 0; ct--, x++) {
-							walls[x] = w;
-							medium[x] = md;
-						}
-						break;
-					}
-					if (tint == 'l') {
-						int ct = new Integer(st.nextToken()).intValue();
-						for (; ct > 0; ct--, x++) {
-							walls[x] = walls[x - gridSizeX];
-							medium[x] = medium[x - gridSizeX];
-						}
-						break;
-					}
-					if (tint == 's') {
-						int sx = new Integer(st.nextToken()).intValue();
-						int sy = new Integer(st.nextToken()).intValue();
-						sources[srci].x = sx;
-						sources[srci].y = sy;
-						srci++;
-						break;
-					}
-					System.out.println("unknown type!");
+                    if (tint >= '0' && tint <= '9')
+                        tint = new Integer(type).intValue();
+                    DragObject newobj = createObj(tint, st);
+                    if (newobj==null) {
+                    	console("unrecognized dump type: " + type);
+                    	break;
+                    }
+                    if (newobj.getDumpType() != tint)
+                    	console("dump type mismatch for " + tint);
+                    dragObjects.add(newobj);
 				} catch (Exception ee) {
+					console("got exception when reading setup");
 					ee.printStackTrace();
 					break;
 				}
@@ -4601,6 +4606,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
+		doMouseMove(event);
+	}
+	
+	void doMouseMove(MouseEvent<?> event) {
+		if (rotationMode) {
+			int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
+			int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
+			selectedObject.rotateTo(xp, yp);
+			return;
+		}
 		if (dragging) {
 			dragMouse(event);
 			return;
@@ -4614,7 +4629,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		selectSource(event);
 	}
 
-	void dragMouse(MouseMoveEvent event) {
+	void dragMouse(MouseEvent<?> event) {
 		if (view3dCheck.getState()) {
 			view3dDrag(event);
 		}
@@ -4644,7 +4659,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			drawPoke(xp, yp);
 	}
 	
+	/*
 	public void mouseMoved(MouseEvent e) {
+		// this is old and not used anymore, get rid of it!
 		if (dragging)
 			return;
 		int x = e.getX();
@@ -4657,17 +4674,23 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		// if (stoppedCheck.getState())
 		// cv.repaint(0);
 	}
-
+*/
+	
 	@Override
 	public void onMouseDown(MouseDownEvent event) {
 		adjustResolution = false;
-		mouseMoved(event);
+		doMouseMove(event);
+//		mouseMoved(event);
+		if (rotationMode) {
+			rotationMode = false;
+			return;
+		}
 //		if ((event.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
 //		    return;
 		dragging = true;
 		edit(event);
 		
-		double minf = 9 * windowWidth/winSize.height;
+		double minf = 22 * windowWidth/winSize.height;
 		double bestf = minf;
 		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
 		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
@@ -4743,7 +4766,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	@Override
 	public void onMouseWheel(MouseWheelEvent event) {
         event.preventDefault();
-        if (selectedObject != null) {
+        if (selectedObject != null && selectedObject.canRotate()) {
         	selectedObject.rotate(event.getDeltaY()* .01);
         }
 	}
@@ -4774,6 +4797,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     void doPopupMenu() {
     	if (selectedObject != null) {
                 elmEditMenuItem .setEnabled(selectedObject.getEditInfo(0) != null);
+                elmRotateMenuItem.setEnabled(selectedObject.canRotate());
                 contextPanel=new PopupPanel(true);
                 contextPanel.add(elmMenuBar);
                 contextPanel.setPopupPosition(menuX, menuY);

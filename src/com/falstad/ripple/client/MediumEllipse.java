@@ -1,6 +1,9 @@
 package com.falstad.ripple.client;
 
 public class MediumEllipse extends MediumBox {
+	MediumEllipse() {}
+	MediumEllipse(StringTokenizer st) { super(st); }
+	
 	void prepare() {
 		RippleSim.drawSolidEllipse(
 				(topLeft.x+topRight.x)/2, (topLeft.y+bottomLeft.y)/2,
@@ -30,4 +33,7 @@ public class MediumEllipse extends MediumBox {
 				(topLeft.x+topRight.x)/2, (topLeft.y+bottomLeft.y)/2,
 				(topRight.x-topLeft.x)/2, (bottomLeft.y-topLeft.y)/2);
 	}
+	
+	int getDumpType() { return 'E'; }
+
 }

@@ -13,6 +13,13 @@ public class Wall extends DragObject {
 		handles.add(new DragHandle(this, x2, y2));
 	}
 
+	Wall(StringTokenizer st) {
+		super(st);
+		handles.add(new DragHandle(this, st));
+		handles.add(new DragHandle(this, st));
+		setTransform();
+	}
+	
 	void prepare() {
 		RippleSim.console("prepare " + handles.get(0) + " " + handles.get(1));
 		RippleSim.drawWall(handles.get(0).x, handles.get(0).y, handles.get(1).x, handles.get(1).y);
@@ -21,4 +28,7 @@ public class Wall extends DragObject {
 	@Override void drawSelection() {
 		prepare();
 	}
+	
+	int getDumpType() { return 'w'; }
+
 }
