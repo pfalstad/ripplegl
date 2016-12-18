@@ -10,6 +10,17 @@ public class ModeBox extends RectDragObject {
 		box = true;
 	}
 	
+	ModeBox(int x, int y, int x2, int y2, int xm, int ym) {
+		box = true;
+		xmode = xm;
+		ymode = ym;
+		topLeft.x = bottomLeft.x = x;
+		topLeft.y = topRight.y = y;
+		topRight.x = bottomRight.x = x2;
+		bottomLeft.y = bottomRight.y = y2;
+		setTransform();
+	}
+
 	int rand() {
 		return Math.abs(sim.random.nextInt());
 	}

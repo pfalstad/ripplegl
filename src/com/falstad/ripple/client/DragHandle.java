@@ -32,4 +32,9 @@ public class DragHandle {
 		}
 		return false;
 	}
+	
+	void rescale(double scale) {
+		x = (int) (x*scale);
+		y = (int) (y*scale);
+	}
 }

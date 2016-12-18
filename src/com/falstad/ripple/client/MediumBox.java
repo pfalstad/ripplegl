@@ -12,6 +12,15 @@ public class MediumBox extends RectDragObject {
 		speedIndex = new Double(st.nextToken()).doubleValue();
 	}
 	
+	MediumBox(int x, int y, int x2, int y2) {
+		speedIndex = .25;
+		topLeft.x = bottomLeft.x = x;
+		topLeft.y = topRight.y = y;
+		topRight.x = bottomRight.x = x2;
+		bottomLeft.y = bottomRight.y = y2;
+		setTransform();
+	}
+
 	void prepare() {
 		RippleSim.drawMedium(topLeft.x, topLeft.y, topRight.x, topRight.y, 
 				bottomLeft.x, bottomLeft.y,

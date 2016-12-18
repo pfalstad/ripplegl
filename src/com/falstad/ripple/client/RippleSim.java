@@ -154,6 +154,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Color wallColor, posColor, negColor, zeroColor, medColor, posMedColor,
 			negMedColor, sourceColor;
 	Color schemeColors[][];
+	Point dragPoint;
 	// Method timerMethod;
 	int timerDiv;
 	ImportDialog impDialog;
@@ -1034,8 +1035,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		if (view3dCheck.getState())
 			draw3dView();
-		else
-			draw2dView();
+//		else
+//			draw2dView();
 
 		// if (imageSource != null)
 		// imageSource.newPixels();
@@ -1071,9 +1072,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				increaseResolution = true;
 				startTime = sysTime;
 			}
-			if (dragging && selectedSource == -1
-					&& modeChooser.getSelectedIndex() == MODE_FUNCHOLD)
-				editFuncPoint(dragX, dragY);
+//			if (dragging && selectedSource == -1
+//					&& modeChooser.getSelectedIndex() == MODE_FUNCHOLD)
+//				editFuncPoint(dragX, dragY);
 
 			// cv.repaint(0);
 		}
@@ -1240,93 +1241,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			plotPixel(xx, yy - j, col);
 			plotPixel(xx + j, yy, col);
 			plotPixel(xx - j, yy, col);
-		}
-	}
-
-	void draw2dView() {
-		int ix = 0;
-		int i, j, k, l;
-		for (j = 0; j != windowHeight; j++) {
-			ix = winSize.width * (j * winSize.height / windowHeight);
-			int j2 = j + windowOffsetY;
-			int gi = j2 * gw + windowOffsetX;
-			int y = j * winSize.height / windowHeight;
-			int y2 = (j + 1)  * winSize.height / windowHeight;
-			for (i = 0; i != windowWidth; i++, gi++) {
-				int x = i * winSize.width / windowWidth;
-				int x2 = (i + 1) * winSize.width / windowWidth;
-				int i2 = i + windowOffsetX;
-				double dy = func[gi] * brightMult;
-				if (dy < -1)
-					dy = -1;
-				if (dy > 1)
-					dy = 1;
-				int col = 0;
-				int colR = 0, colG = 0, colB = 0;
-				if (walls[gi]) {
-					colR = wallColor.getRed();
-					colG = wallColor.getGreen();
-					colB = wallColor.getBlue();
-				} else if (dy < 0) {
-					double d1 = -dy;
-					double d2 = 1 - d1;
-					double d3 = medium[gi] * (1 / 255.01);
-					double d4 = 1 - d3;
-					double a1 = d1 * d4;
-					double a2 = d2 * d4;
-					double a3 = d1 * d3;
-					double a4 = d2 * d3;
-					colR = (int) (negColor.getRed() * a1 + zeroColor.getRed()
-							* a2 + negMedColor.getRed() * a3 + medColor
-							.getRed() * a4);
-					colG = (int) (negColor.getGreen() * a1
-							+ zeroColor.getGreen() * a2
-							+ negMedColor.getGreen() * a3 + medColor.getGreen()
-							* a4);
-					colB = (int) (negColor.getBlue() * a1 + zeroColor.getBlue()
-							* a2 + negMedColor.getBlue() * a3 + medColor
-							.getBlue() * a4);
-				} else {
-					double d1 = dy;
-					double d2 = 1 - dy;
-					double d3 = medium[gi] * (1 / 255.01);
-					double d4 = 1 - d3;
-					double a1 = d1 * d4;
-					double a2 = d2 * d4;
-					double a3 = d1 * d3;
-					double a4 = d2 * d3;
-					colR = (int) (posColor.getRed() * a1 + zeroColor.getRed()
-							* a2 + posMedColor.getRed() * a3 + medColor
-							.getRed() * a4);
-					colG = (int) (posColor.getGreen() * a1
-							+ zeroColor.getGreen() * a2
-							+ posMedColor.getGreen() * a3 + medColor.getGreen()
-							* a4);
-					colB = (int) (posColor.getBlue() * a1 + zeroColor.getBlue()
-							* a2 + posMedColor.getBlue() * a3 + medColor
-							.getBlue() * a4);
-				}
-				col = (255 << 24) | (colR << 16) | (colG << 8) | (colB);
-//				logger.log(Level.SEVERE, colR+","+colG+","+colB);
-				for (k = 0; k != x2 -x; k++, ix++){
-					for (l = 0; l != y2-y; l++){
-						pixels.set(l*winSize.width*4 + ix*4 + 0,colR);
-			    		pixels.set(l*winSize.width*4 + ix*4+ 1,colG);
-			    		pixels.set(l*winSize.width*4 + ix*4 + 2,colB);
-			    		pixels.set(l*winSize.width*4 + ix*4+ 3,255);
-//						pixels.set(ix + l * winSize.width,col);
-//						pixels[ix + l * winSize.width] = col;
-					}
-				}
-			}
-		}
-		int intf = (gridSizeY / 2 - windowOffsetY) * winSize.height
-				/ windowHeight;
-		for (i = 0; i != sourceCount; i++) {
-			OscSource src = sources[i];
-			int xx = src.getScreenX();
-			int yy = src.getScreenY();
-			plotSource(i, xx, yy);
 		}
 	}
 
@@ -1699,36 +1613,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		*/
 	}
 
-	void editFuncPoint(int x, int y) {
-		int xp = x * windowWidth / winSize.width + windowOffsetX;
-		int yp = y * windowHeight / winSize.height + windowOffsetY;
-		int gi = xp + yp * gw;
-		if (modeChooser.getSelectedIndex() == MODE_WALLS) {
-			if (!dragSet && !dragClear) {
-				dragClear = walls[gi];
-				dragSet = !dragClear;
-			}
-			walls[gi] = dragSet;
-			calcExceptions();
-			func[gi] = funci[gi] = 0;
-		} else if (modeChooser.getSelectedIndex() == MODE_MEDIUM) {
-			if (!dragSet && !dragClear) {
-				dragClear = medium[gi] > 0;
-				dragSet = !dragClear;
-			}
-			medium[gi] = (dragSet) ? mediumMax : 0;
-			calcExceptions();
-		} else {
-			if (!dragSet && !dragClear) {
-				dragClear = func[gi] > .1;
-				dragSet = !dragClear;
-			}
-			func[gi] = (dragSet) ? 1 : -1;
-			funci[gi] = 0;
-		}
-		// cv.repaint(0);
-	}
-
 	void selectSource(MouseEvent me) {
 		int x = me.getX();
 		int y = me.getY();
@@ -1802,6 +1686,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void setResolution() {
+		int oldWidth = windowWidth;
 		windowWidth = windowHeight = resBar.getValue();
 		int border = windowWidth / 9;
 		if (border < 20)
@@ -1814,6 +1699,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		windowRight = windowOffsetX + windowWidth - 1;
 		setResolutionGL(gridSizeX, gridSizeY, windowOffsetX, windowOffsetY);
 		console("res " + gridSizeX + " " + speedBar.getValue());
+		int i;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			obj.rescale(windowWidth/(double)oldWidth);
+		}
+		changedWalls = true;
 	}
 
 	void setResolution(int x) {
@@ -1973,10 +1864,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void addMedium() {
-		int i, j;
-		for (i = 0; i != gridSizeX; i++)
-			for (j = gridSizeY / 2; j != gridSizeY; j++)
-				medium[i + j * gw] = mediumMax;
+		MediumBox mb = new MediumBox(0, gridSizeY/2, gridSizeX-1, gridSizeY-1);
+		dragObjects.add(mb);
 	}
 
 	void setSources() {
@@ -2941,6 +2830,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void setupMode(int x, int y, int sx, int sy, int nx, int ny) {
+		ModeBox m = new ModeBox(x-1-windowOffsetX, y-1-windowOffsetY,
+				x+sx-windowOffsetX, y+sy-windowOffsetY, nx, ny);
+		dragObjects.add(m);
+		/*
 		int i, j;
 		for (i = 0; i != sx; i++)
 			for (j = 0; j != sy; j++) {
@@ -2949,9 +2842,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 						.sin(pi * ny * (j + 1) / (sy + 1)));
 				funci[gi] = 0;
 			}
+			*/
 	}
 
 	void setupAcousticMode(int x, int y, int sx, int sy, int nx, int ny) {
+		setupMode(x, y, sx, sy, nx, ny);
+		/*
 		int i, j;
 		if (nx == 0 && ny == 0)
 			return;
@@ -2962,6 +2858,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 						.cos(pi * ny * j / (sy - 1)));
 				funci[gi] = 0;
 			}
+			*/
 	}
 
 	class BigModeSetup extends Setup {
@@ -4609,11 +4506,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		doMouseMove(event);
 	}
 	
+	Point getPointFromEvent(MouseEvent<?> event) {
+		int xp = event.getX()*windowWidth/winSize.width;
+		int yp = event.getY()*windowHeight/winSize.height;
+		return new Point(xp, yp);
+	}
+	
 	void doMouseMove(MouseEvent<?> event) {
 		if (rotationMode) {
-			int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
-			int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
-			selectedObject.rotateTo(xp, yp);
+			Point pt = getPointFromEvent(event);
+			selectedObject.rotateTo(pt.x, pt.y);
 			return;
 		}
 		if (dragging) {
@@ -4622,6 +4524,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 		int x = event.getX();
 		int y = event.getY();
+		dragPoint = getPointFromEvent(event);
 		dragStartX = dragX = x;
 		dragStartY = dragY = y;
 		viewAngleDragStart = viewAngle;
@@ -4639,24 +4542,19 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		edit(event);
 		adjustResolution = false;
 
-		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
-		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
+		Point pt = getPointFromEvent(event);
 		if (draggingHandle != null) {
-			Point mp = selectedObject.inverseTransformPoint(new Point(xp, yp));
+			Point mp = selectedObject.inverseTransformPoint(pt);
 			draggingHandle.dragTo(mp.x, mp.y);
 			changedWalls = true;
 		} else if (selectedObject != null) {
-			int dxp = dragX*windowWidth/winSize.width + windowOffsetX;
-			int dyp = dragY*windowHeight/winSize.height + windowOffsetY;
-			console("drag " + xp + " " + yp + " " + dxp + " " + dyp);
-			if (dxp != xp || dyp != yp) {
-				selectedObject.drag(xp-dxp, yp-dyp);
-				dragX = event.getX();
-				dragY = event.getY();
+			if (dragPoint.x != pt.x || dragPoint.y != pt.y) {
+				selectedObject.drag(pt.x-dragPoint.x, pt.y-dragPoint.y);
+				dragPoint = pt;
 				changedWalls = true;
 			}
 		} else
-			drawPoke(xp, yp);
+			drawPoke(pt.x, pt.y);
 	}
 	
 	/*
@@ -4692,10 +4590,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		double minf = 22 * windowWidth/winSize.height;
 		double bestf = minf;
-		int xp = event.getX()*windowWidth/winSize.width + windowOffsetX;
-		int yp = event.getY()*windowHeight/winSize.height + windowOffsetY;
+		Point mp = getPointFromEvent(event);
 		draggingHandle = null;
-		Point mp = new Point(xp, yp);
 		if (selectedObject != null) {
 			int i;
 			Point p = selectedObject.inverseTransformPoint(mp);
@@ -4735,7 +4631,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setSelectedObject(sel);
 		
 		if (selectedObject == null && !clearingSelection)
-			drawPoke(xp, yp);
+			drawPoke(mp.x, mp.y);
 		
 		/*
 		handler = cv.addMouseMoveHandler(new MouseMoveHandler(){
@@ -4834,8 +4730,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject d = dragObjects.get(i);
 			Rectangle r = d.boundingBox();
-			for (jx = r.x*spsize/gridSizeX; jx <= (r.x+r.width)*spsize/gridSizeX; jx++)
-				for (jy = r.y*spsize/gridSizeY; jy <= (r.y+r.height)*spsize/gridSizeY; jy++) {
+			for (jx = r.x*spsize/windowWidth; jx <= (r.x+r.width)*spsize/windowWidth; jx++)
+				for (jy = r.y*spsize/windowHeight; jy <= (r.y+r.height)*spsize/windowHeight; jy++) {
 					if (jx >= 0 && jy >= 0 && jx < spsize && jy < spsize) {
 						spacegrid[jx][jy] = true;
 					}
@@ -4848,9 +4744,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         int dy = 0;
         while (true) {
         	if (!spacegrid[tx][ty]) {
-        		return new Rectangle(tx*gridSizeX/spsize+2, ty*gridSizeY/spsize+2,
-        				gridSizeX/spsize-4,
-        				gridSizeY/spsize-4);
+        		return new Rectangle(tx*windowWidth/spsize+2, ty*windowHeight/spsize+2,
+        				windowWidth/spsize-4,
+        				windowHeight/spsize-4);
         	}
         	tx += dx;
         	ty += dy;
@@ -4861,11 +4757,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
                 if (dy == 0) spiralCounter++;
                 spiralIndex = spiralCounter;
             }
-            int tx0 = tx*gridSizeX/spsize;
-            int ty0 = ty*gridSizeY/spsize;
-            if (tx0 < windowOffsetX || ty0 < windowOffsetY ||
-            	tx0+spsize > gridSizeX-windowOffsetX ||
-            	ty0+spsize > gridSizeY-windowOffsetY)
+            if (tx < 0 || ty < 0 || tx >= spsize || ty >= spsize)
             	break;
         }
 		return new Rectangle(gridSizeX/2, gridSizeY/2, spsize, spsize);
@@ -4890,7 +4782,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		if (event.getSource() == resBar) {
 		    setResolution();
-		    reinit();
+//		    reinit();
 		}
 		if (event.getSource() == dampingBar)
 		    setDamping();

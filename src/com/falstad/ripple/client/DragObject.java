@@ -79,7 +79,7 @@ public abstract class DragObject implements Editable {
 			DragHandle dh = handles.get(i);
 			int x = (int) (dh.x*transform[0]+dh.y*transform[1]+transform[2]);
 			int y = (int) (dh.x*transform[3]+dh.y*transform[4]+transform[5]);
-			RippleSim.drawHandle(x-sim.windowOffsetX, y-sim.windowOffsetY);
+			RippleSim.drawHandle(x, y); // -sim.windowOffsetX, y-sim.windowOffsetY);
 		}
 		drawSelection();
 	}
@@ -228,5 +228,14 @@ public abstract class DragObject implements Editable {
 
 	@Override
 	public void setEditValue(int n, EditInfo ei) {
+	}
+	
+	void rescale(double scale) {
+		int i;
+		for (i = 0; i != handles.size(); i++) {
+			DragHandle dh = handles.get(i);
+			dh.rescale(scale);
+		}
+		setTransform();
 	}
 }

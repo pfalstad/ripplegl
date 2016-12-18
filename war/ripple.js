@@ -477,13 +477,13 @@ var transform = [1, 0, 0, 1, 0, 0];
     	if (sim.drawingSelection > 0) {
         	mtx[0] = +2/windowWidth;
         	mtx[5] = -2/windowHeight;
-        	mtx[12] = -1 + (.5-windowOffsetX)*mtx[0];
-        	mtx[13] = +1 + (.5-windowOffsetY)*mtx[5];
+        	mtx[12] = -1 + .5*mtx[0];
+        	mtx[13] = +1 + .5*mtx[5];
     	} else {
         	mtx[0] = +2/gridSizeX;
         	mtx[5] = -2/gridSizeY;
-        	mtx[12] = -1 + .5*mtx[0];
-        	mtx[13] = +1 + .5*mtx[5];
+        	mtx[12] = -1 + (.5+windowOffsetX)*mtx[0];
+        	mtx[13] = +1 + (.5+windowOffsetY)*mtx[5];
     	}
 //    	transform[2] = transform[5] = 1;
     	mat4.multiply(mtx, [transform[0], transform[3], 0, 0,

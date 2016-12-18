@@ -120,4 +120,9 @@ public class MultipoleSource extends Source {
 		return " " + dh0.x + " " + dh0.y + " " + dh1.x + " " + dh1.y;
 	}
 
+	@Override void rescale(double scale) {
+		handles.get(0).rescale(scale);
+		positionHandles();
+		setTransform();
+	}
 }
