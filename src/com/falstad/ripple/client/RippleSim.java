@@ -34,6 +34,7 @@ import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
 import com.google.gwt.user.client.Random;
@@ -292,6 +293,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawHandle(x, y);
 	}-*/;
 
+	static native void drawFocus(int x, int y) /*-{
+		this.drawFocus(x, y);
+	}-*/;
+
 	static native void drawPoke(int x, int y) /*-{
 		this.drawPoke(x, y);
 	}-*/;
@@ -446,10 +451,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		blankButton.addClickHandler(this);
 		verticalPanel.add(blankWallsButton = new Button("Clear Walls"));
 		blankWallsButton.addClickHandler(this);
-		verticalPanel.add(borderButton = new Button("Add Wall"));
-		borderButton.addClickHandler(this);
-		verticalPanel.add(boxButton = new Button("Add Box"));
-		boxButton.addClickHandler(this);
 		verticalPanel.add(exportButton = new Button("Import/Export"));
 		exportButton.addClickHandler(this);
 
@@ -468,8 +469,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(dampingBar = new Scrollbar(Scrollbar.HORIZONTAL, 10, 1, 2, 100));
 		dampingBar.addClickHandler(this);
 		verticalPanel.add(new Label("Source Frequency"));
-		verticalPanel.add(freqBar = new Scrollbar(Scrollbar.HORIZONTAL, freqBarValue = 15, 1, 1, 30));
-		dampingBar.addClickHandler(this);
+		verticalPanel.add(freqBar = new Scrollbar(Scrollbar.HORIZONTAL, freqBarValue = 15, 1, 1, 30,
+				new Command() {
+			public void execute() { setFreq(); }
+		}));
+//		freqBar.addClickHandler(this);
 		verticalPanel.add(new Label("Brightness"));
 		verticalPanel.add(brightnessBar = new Scrollbar(Scrollbar.HORIZONTAL, 27, 1, 1, 1200));
 //		auxBar = new Scrollbar(Scrollbar.HORIZONTAL, 1, 1, 1, 30);
@@ -689,8 +693,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void createWall(int x1, int y1, int x2, int y2) {
-		Wall w = new Wall(x1, y1, x2, y2);
+		console("createwall " + x1 + " " + y1 + " " +x2 + " "  + y2);
+		Wall w = new Wall(x1-windowOffsetX, y1-windowOffsetY,
+				x2-windowOffsetX, y2-windowOffsetY);
 		dragObjects.add(w);
+		changedWalls = true;
 	}
 	
 	void setWall(int x, int y) {
@@ -859,7 +866,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			setAcoustic(!fixedEndsCheck.getState());
 			for (i = 0; i != iterCount; i++) {
 				simulate();
-				doSources(.25);
+				t += .25;
+//				doSources(.25);
 				int j;
 				for (j = 0; j != dragObjects.size(); j++)
 					dragObjects.get(j).run();
@@ -871,9 +879,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //			console("total time = " + (System.currentTimeMillis()-time));
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult);
-			setDrawingSelection(.6+.4*Math.sin(t*.2));
 			for (i = 0; i != dragObjects.size(); i++) {
 				DragObject obj = dragObjects.get(i);
+				if (obj.selected)
+					setDrawingSelection(.6+.4*Math.sin(t*.2));
+				else
+					setDrawingSelection(-1);
 				double xform[] = obj.transform;
 				setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
 				obj.draw();
@@ -1081,6 +1092,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		cvcontext.drawImage(backcontext.getCanvas(), 0.0, 0.0);
 	}
 
+	/*
 	void doSources(double tadd) {
 		t += tadd;
 		if (sourceCount > 0) {
@@ -1160,6 +1172,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			}
 		}
 	}
+	*/
 	
 	// filter out high-frequency noise
 	int filterCount;
@@ -1678,11 +1691,20 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	void setFreq() {
 		// adjust time zero to maintain continuity in the freq func
 		// even though the frequency has changed.
-		double oldfreq = freqBarValue * freqMult;
+//		double oldfreq = freqBarValue * freqMult;
 		freqBarValue = freqBar.getValue();
 		double newfreq = freqBarValue * freqMult;
-		double adj = newfreq - oldfreq;
-		freqTimeZero = t - oldfreq * (t - freqTimeZero) / newfreq;
+//		double adj = newfreq - oldfreq;
+//		freqTimeZero = t - oldfreq * (t - freqTimeZero) / newfreq;
+		int i;
+		console("setfreq " + newfreq);
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			if (obj instanceof Source) {
+				console("src " + obj);
+				((Source) obj).setFrequency(newfreq);
+			}
+		}
 	}
 
 	void setResolution() {
@@ -1811,6 +1833,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setup = (Setup) setupList.elementAt(setupChooser.getSelectedIndex());
 		setup.select();
 		setup.doSetupSources();
+		int i;
+		if (sourcePlane) {
+			for (i = 0; i != sourceCount; i += 2)
+				dragObjects.add(new LineSource(sources[i].x-windowOffsetX, sources[i].y-windowOffsetY,
+						sources[i+1].x-windowOffsetX, sources[i+1].y-windowOffsetY));
+		} else
+			for (i = 0; i != sourceCount; i++)
+				dragObjects.add(new Source(sources[i].x-windowOffsetX, sources[i].y-windowOffsetY));
 		calcExceptions();
 		setDamping();
 		// System.out.println("setup " + setupChooser.getSelectedIndex());
@@ -1864,7 +1894,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void addMedium() {
-		MediumBox mb = new MediumBox(0, gridSizeY/2, gridSizeX-1, gridSizeY-1);
+		MediumBox mb = new MediumBox(-windowOffsetX, windowHeight/2, windowWidth+windowOffsetX-1, windowHeight+windowOffsetY-1);
 		dragObjects.add(mb);
 	}
 
@@ -2393,9 +2423,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int i;
 			int x = gridSizeX / 2;
 			int y = windowOffsetY + 12; // was +6
-			for (i = -15; i <= 15; i++)
-				// was 5
-				setWall(x + i, y);
+			createWall(x-15, y, x+15, y);
+//			for (i = -15; i <= 15; i++)
+//				 was 5
+//				setWall(x + i, y);
 			setBrightness(280);
 			setFreqBar(20);
 		}
@@ -2414,8 +2445,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_1S1F_PLANE);
 			int x = windowOffsetX + windowWidth / 2;
 			int i;
-			for (i = windowWidth / 2; i < windowWidth; i++)
-				setWall(windowOffsetX + i, windowOffsetY + 3);
+			createWall(windowOffsetX+windowWidth/2, windowOffsetY+3,
+					windowOffsetX+windowWidth-1, windowOffsetY+3);
+//			for (i = windowWidth / 2; i < windowWidth; i++)
+//				setWall(windowOffsetX + i, windowOffsetY + 3);
 			setBrightness(4);
 			setFreqBar(25);
 		}
@@ -4574,6 +4607,36 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 */
 	
+	void enableDisableUI() {
+		int i;
+		
+		// check if all sources are same frequency
+		Source src1 = null;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			if (!(obj instanceof Source))
+				continue;
+			Source src = (Source)obj;
+			
+			// don't let freq be adjusted if we have pulse sources
+			if (src.waveform == Source.WF_PULSE) {
+				src1 = null;
+				break;
+			}
+			if (src1 == null)
+				src1 = src;
+			else if (Math.abs(src.frequency-src1.frequency) > 1e-3) {
+				console("frequency diff " + src.frequency + " "+ src1.frequency);
+				src1 = null;
+				break;
+			}
+		}
+		if (src1 == null)
+			freqBar.disable();
+		else
+			freqBar.enable();
+	}
+	
 	@Override
 	public void onMouseDown(MouseDownEvent event) {
 		adjustResolution = false;
@@ -4769,13 +4832,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			doBlank();
 		} else if (event.getSource() == blankWallsButton) {
 			deleteAllObjects();
-		} else if (event.getSource() == borderButton) {
-			doCreateWall();
-//			doBorder();
-		} else if (event.getSource() == boxButton) {
-			Box b = new Box();
-			b.setInitialPosition();
-			dragObjects.add(b);
 		} else if (event.getSource() == exportButton) {
 			 doImport();
 		}

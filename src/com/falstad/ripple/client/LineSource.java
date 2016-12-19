@@ -11,6 +11,17 @@ public class LineSource extends Source {
 		setTransform();
 	}
 	
+	LineSource(int x, int y, int x2, int y2) {
+		DragHandle h0 = handles.get(0);
+		h0.x = x;
+		h0.y = y;
+		handles.add(new DragHandle(this, x2, y2));
+		frequency = .5;
+		length = 10;
+		delay = 100;
+		setTransform();
+	}
+
 	void run() {
 		DragHandle dh1 = handles.get(0);
 		DragHandle dh2 = handles.get(1);

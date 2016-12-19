@@ -8,10 +8,22 @@ public class Source extends DragObject {
     double frequency, phaseShift, freqTimeZero;
     double length, delay;
     boolean enabled;
+    EditInfo frequencyEditInfo, wavelengthEditInfo;
     
 	Source() {
 		handles.add(new DragHandle(this));
+		int i;
 		frequency = .5;
+		
+		// get freq from last source if any
+		for (i = sim.dragObjects.size()-1; i >= 0; i--) {
+			DragObject obj = sim.dragObjects.get(i);
+			if (obj instanceof Source) {
+				frequency = ((Source) obj).frequency;
+				break;
+			}
+		}
+		
 		length = 10;
 		delay = 100;
 		setTransform();
@@ -29,9 +41,23 @@ public class Source extends DragObject {
 		setTransform();
 	}
 	
+	Source(int x, int y) {
+		handles.add(new DragHandle(this, x, y));
+		frequency = .5;
+		length = 10;
+		delay = 100;
+		setTransform();
+	}
+	
 	String dump() {
 		return super.dump() + " " + waveform + " " + frequency + " " + phaseShift + " " + length + " " +
 					delay;
+	}
+	
+	void setFrequency(double f) {
+		double oldfreq = frequency;
+		frequency = f;
+		freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
 	}
 	
 	double getValue() {
@@ -59,6 +85,15 @@ public class Source extends DragObject {
         	RippleSim.drawSource(dh.x, dh.y, v); 
 	}
 	
+	void draw() {
+		int i;
+		for (i = 0; i != handles.size(); i++) {
+			DragHandle dh = handles.get(i);
+			RippleSim.drawHandle(dh.x,  dh.y);
+		}
+		super.draw();
+	}
+	
     public EditInfo getEditInfo(int n) {
     	if (n == 0) {
     		EditInfo ei =  new EditInfo("Waveform", waveform, -1, -1);
@@ -71,7 +106,7 @@ public class Source extends DragObject {
     	}
     	if (waveform == WF_SINE) {
     		if (n == 1)
-    			return new EditInfo("Frequency (Hz)", frequency, 4, 500);
+    			return frequencyEditInfo = new EditInfo("Frequency (Hz)", frequency, 4, 500);
     		if (n == 2)
     			return new EditInfo("Phase Offset (degrees)", phaseShift*180/Math.PI,
     					-180, 180).setDimensionless();
@@ -81,8 +116,10 @@ public class Source extends DragObject {
     		if (n == 2)
     			return new EditInfo("Delay", delay, 0, 0);
     		if (waveform == WF_PACKET && n == 3)
-    			return new EditInfo("Frequency (Hz)", frequency, 4, 500);
+    			return frequencyEditInfo = new EditInfo("Frequency (Hz)", frequency, 4, 500);
     	}
+    	if (n == 3)
+    		return wavelengthEditInfo = new EditInfo("Wavelength:", getWavelength(), 4, 500);
     	return null;
     }
     public void setEditValue(int n, EditInfo ei) {
@@ -99,6 +136,8 @@ public class Source extends DragObject {
     			double oldfreq = frequency;
     			frequency = ei.value;
     			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
+    			wavelengthEditInfo.value = getWavelength();
+    			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
     		}
     		if (n == 2)
     			phaseShift = ei.value*Math.PI/180;
@@ -107,9 +146,16 @@ public class Source extends DragObject {
     			length = ei.value;
     		if (n == 2)
     			delay = ei.value;
-    		if (n == 3)
-    			frequency = ei.value;
     	}
+    	if (n == 3) {
+    		frequency = 92/3*.5/ei.value;
+    		frequencyEditInfo.value = frequency;
+			EditDialog.theEditDialog.updateValue(frequencyEditInfo);
+    	}
+    }
+    
+    double getWavelength() {
+    	return 92/3*.5/frequency;
     }
     
 	int getDumpType() { return 's'; }

@@ -263,18 +263,18 @@ var transform = [1, 0, 0, 1, 0, 0];
     }
 
     function setPosRect(x1, y1, x2, y2) {
-	var points = [ x2, y1, x1, y1, x2, y2, x1, y1, x2, y2, x1, y2 ];
-        var i;
-        for (i = 0; i != 6; i++) {
-             var xi = points[i*2];
-             var yi = points[i*2+1];
-	     simPosition.push(-1+2*xi/gridSizeX, -1+2*yi/gridSizeY);
-	     simTextureCoord.push(xi/gridSizeX, yi/gridSizeY);
-	     var damp = 1;
-             if (xi == 1 || yi == 1 || xi == gridSizeX-2 || yi == gridSizeY-2)
-                damp = .999-8*.01; // was 20
-	     simDamping.push(damp);
-        }
+    	var points = [ x2, y1, x1, y1, x2, y2, x1, y1, x2, y2, x1, y2 ];
+    	var i;
+    	for (i = 0; i != 6; i++) {
+    		var xi = points[i*2];
+    		var yi = points[i*2+1];
+    		simPosition.push(-1+2*xi/gridSizeX, -1+2*yi/gridSizeY);
+    		simTextureCoord.push(xi/gridSizeX, yi/gridSizeY);
+    		var damp = 1;
+    		if (xi == 1 || yi == 1 || xi == gridSizeX-2 || yi == gridSizeY-2)
+    			damp = .999-8*.01; // was 20
+    			simDamping.push(damp);
+    	}
     }
 
     var laptopVertexPositionBuffer;
@@ -393,7 +393,11 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     function drawHandle(x, y) {
         gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1, 1.0, 1.0, 1.0);
+        if (sim.drawingSelection < 0)
+        	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1, 1.0, 1.0, 1.0);
+        else
+        	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection,
+        			sim.drawingSelection, 0, 1.0);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var cx = -1+2*(x+.5)/windowWidth;
@@ -408,9 +412,34 @@ var transform = [1, 0, 0, 1, 0, 0];
 //        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         setMatrixUniforms(shaderProgramDraw);
-//        gl.lineWidth(3);
+        gl.lineWidth(sim.drawingSelection < 0 ? 1 : 2);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINE_LOOP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+
+        //mvPopMatrix();
+    }
+
+    function drawFocus(x, y) {
+        gl.useProgram(shaderProgramDraw);
+        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1, 1.0, 1.0, 1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var cx = x; // -1+2*(x+.5)/windowWidth;
+        var cy = y; // +1-2*(y+.5)/windowHeight;
+        var ox = 3;
+        var oy = 3;
+        var coords = [ cx-ox, cy, cx+ox, cy, cx, cy+oy, cx, cy-oy ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        setMatrixUniforms(shaderProgramDraw);
+//        gl.lineWidth(3);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.drawArrays(gl.LINES, 0, 4);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
 
         //mvPopMatrix();
@@ -887,6 +916,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
     	sim.drawPhasedArray = function (x, y, x2, y2, f1, f2) { drawPhasedArray(x, y, x2, y2, f1, f2); }
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
+    	sim.drawFocus = function (x, y) { drawFocus(x, y); }
     	sim.drawPoke = function (x, y) { drawPoke(x, y); }
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 0); }
     	sim.clearWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 1); }

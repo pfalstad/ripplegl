@@ -24,6 +24,17 @@ public class Ellipse extends RectDragObject {
 	
 	@Override void drawSelection() {
 		prepare();
+		double a = (topRight.x-topLeft.x)/2;
+		double b = (bottomRight.y-topRight.y)/2;
+		int fc = (int)Math.sqrt(Math.abs(a*a-b*b));
+		int fd = fc;
+		if (a > b)
+			fd = 0;
+		else
+			fc = 0;
+		sim.console("ell " + a + " " + b + " " + fc + " " + fd);
+		RippleSim.drawFocus((topLeft.x+topRight.x)/2-fc, (topLeft.y+bottomLeft.y)/2-fd);
+		RippleSim.drawFocus((topLeft.x+topRight.x)/2+fc, (topLeft.y+bottomLeft.y)/2+fd);
 	}
 	
 	int getDumpType() { return 'e'; }

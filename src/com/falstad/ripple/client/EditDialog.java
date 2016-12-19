@@ -57,16 +57,18 @@ class EditDialog extends DialogBox  {
 	VerticalPanel vp;
 	HorizontalPanel hp;
 	NumberFormat noCommaFormat;
+	static EditDialog theEditDialog;
 
 	EditDialog(Editable ce, RippleSim f) {
 		setText("Edit Component");
 		cframe = f;
 		elm = ce;
+		theEditDialog = this;
 //		setLayout(new EditDialogLayout());
 		vp=new VerticalPanel();
 		setWidget(vp);
 		einfos = new EditInfo[10];
-		noCommaFormat=NumberFormat.getFormat("####.##########");
+		noCommaFormat=NumberFormat.getFormat("####.###");
 //		noCommaFormat = DecimalFormat.getInstance();
 //		noCommaFormat.setMaximumFractionDigits(10);
 //		noCommaFormat.setGroupingUsed(false);
@@ -146,6 +148,11 @@ class EditDialog extends DialogBox  {
 				if (ei.text == null) {
 					ei.textf.setText(unitString(ei));
 				}
+				ei.textf.addValueChangeHandler( new ValueChangeHandler<String>() {
+					public void onValueChange(ValueChangeEvent<String> e){
+						itemStateChanged(e);
+					}
+				});
 			}
 		}
 		einfocount = i;
@@ -221,22 +228,28 @@ class EditDialog extends DialogBox  {
 	    int i;
 	    boolean changed = false;
 	    for (i = 0; i != einfocount; i++) {
-		EditInfo ei = einfos[i];
-		if (ei.choice == src || ei.checkbox == src || ei.button == src) {
-		    
-		    // if we're pressing a button, make sure to apply changes first
-		    if (ei.button == src)
-			apply();
-		    
-		    elm.setEditValue(i, ei);
-		    if (ei.newDialog)
-			changed = true;
-			cframe.changedWalls = true;
-		}
+	    	EditInfo ei = einfos[i];
+	    	if (ei.choice == src || ei.checkbox == src || ei.button == src || ei.textf == src) {
+
+	    		// if we're pressing a button, make sure to apply changes first
+	    		if (ei.button == src)
+	    			apply();
+	    		if (ei.textf == src) {
+					try {
+						double d = parseUnits(ei);
+						ei.value = d;
+					} catch (Exception ex) { /* ignored */ }
+	    		}
+
+	    		elm.setEditValue(i, ei);
+	    		if (ei.newDialog)
+	    			changed = true;
+	    		cframe.changedWalls = true;
+	    	}
 	    }
 	    if (changed) {
-		clearDialog();
-		buildDialog();
+	    	clearDialog();
+	    	buildDialog();
 	    }
 	}
 	
@@ -249,6 +262,15 @@ class EditDialog extends DialogBox  {
 	{
 		EditDialog.this.hide();
 		cframe.editDialog = null;
+		cframe.enableDisableUI();
+	}
+	
+	public void updateValue(EditInfo ei) {
+		if (ei.text != null)
+			ei.textf.setText(ei.text);
+		if (ei.text == null) {
+			ei.textf.setText(unitString(ei));
+		}
 	}
 }
 
