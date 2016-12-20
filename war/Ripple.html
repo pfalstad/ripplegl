@@ -65,7 +65,7 @@
 <script id="shader-draw-fs" type="x-shader/x-fragment">
     precision mediump float;
 
-    varying vec4 vPosition;
+    //varying vec4 vPosition;
 	varying vec4 vColor;
 
     void main(void) {
@@ -174,6 +174,56 @@ med *= 1.5;
 	vDamping = aDamping;
     }
 </script>
+
+<script id="shader-3d-vs" type="x-shader/x-vertex">
+#define TS_COL_WALL 0
+#define TS_COL_POS 1
+#define TS_COL_NEG 2
+#define TS_COL_NEUTRAL 3
+#define TS_COL_POS_MED 4
+#define TS_COL_NEG_MED 5
+#define TS_COL_MED 6
+#define TS_COL_SOURCE 7
+#define TS_COL_SELECT 8
+#define TS_COL_COUNT  9
+
+    attribute vec2 aTextureCoord;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+	uniform float xOffset;
+
+    varying vec2 vTextureCoord;
+    varying vec4 vPosition;
+	varying vec4 vColor;
+    uniform sampler2D uSampler;
+    uniform float brightness;
+    uniform lowp vec3 colors[TS_COL_COUNT];
+
+    void main(void) {
+		vec2 tc = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
+        vec4 pv = texture2D(uSampler, tc);
+        vPosition = uMVMatrix * vec4(-1.0+2.0*tc.x, -1.0+2.0*tc.y, pv.r, 1.0);
+        gl_Position = uPMatrix * vPosition;
+        vTextureCoord = tc;
+		float med = pv.b;
+		vec3 col;
+		if (med == 0.0)
+			col = colors[TS_COL_WALL];
+		else {
+			float r =  pv.r*brightness;
+	        r = clamp(r, -1., 1.);
+                if (r > 0.0)
+                        col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
+                      mix(colors[TS_COL_POS_MED], colors[TS_COL_POS], med), r);
+                else
+                        col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
+                      mix(colors[TS_COL_NEG_MED], colors[TS_COL_NEG], med), -r);
+		}
+        vColor = vec4(col, 1.);
+
+    }
+</script>
+
     <!--                                                               -->
     <!-- Consider inlining CSS to reduce the number of requested files -->
     <!--                                                               -->

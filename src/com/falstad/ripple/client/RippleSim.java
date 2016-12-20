@@ -269,8 +269,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		$doc.passCanvas(cv, this);
 	}-*/;
 
-	static native void updateRippleGL(double bright) /*-{
-		this.updateRipple(bright);
+	static native void updateRippleGL(double bright, boolean threed) /*-{
+		if (threed)
+			this.updateRipple3D(bright);
+		else
+			this.updateRipple(bright);
 	}-*/;
 
 	static native void simulate() /*-{
@@ -280,6 +283,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	static native void setAcoustic(boolean ac) /*-{
 		this.acoustic = ac;
 	}-*/;
+
+	static native void set3dViewAngle(double viewAngle, double viewHeight) /*-{
+		this.set3dViewAngle(viewAngle, viewHeight);
+	}-*/;
+
 
 	static native void setResolutionGL(int x, int y, int wx, int wy) /*-{
 		this.setResolution(x, y, wx, wy);
@@ -878,7 +886,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			}
 //			console("total time = " + (System.currentTimeMillis()-time));
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
-			updateRippleGL(brightMult);
+			updateRippleGL(brightMult, view3dCheck.getState());
 			for (i = 0; i != dragObjects.size(); i++) {
 				DragObject obj = dragObjects.get(i);
 				if (obj.selected)
@@ -1760,6 +1768,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		viewAngleCos = Math.cos(viewAngle);
 		viewAngleSin = Math.sin(viewAngle);
 		viewHeight = (dragStartY - y) / 10. + viewHeightDragStart;
+		set3dViewAngle(viewAngle, viewHeight);
 
 		/*
 		 * viewZoom = (y-dragStartY)/40. + viewZoomDragStart; if (viewZoom < .1)
