@@ -371,9 +371,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	static native void setColors(int wallColor, int posColor, int negColor,
 			int zeroColor, int posMedColor, int negMedColor,
-			int medColor, int sourceColor) /*-{
+			int medColor, int sourceColor, int zeroColor3d) /*-{
 		this.setColors(wallColor, posColor, negColor, zeroColor, posMedColor, negMedColor,
-			medColor, sourceColor);
+			medColor, sourceColor, zeroColor3d);
 	}-*/;
 
 	public void init() {
@@ -887,16 +887,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //			console("total time = " + (System.currentTimeMillis()-time));
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult, view3dCheck.getState());
-			for (i = 0; i != dragObjects.size(); i++) {
-				DragObject obj = dragObjects.get(i);
-				if (obj.selected)
-					setDrawingSelection(.6+.4*Math.sin(t*.2));
-				else
-					setDrawingSelection(-1);
-				double xform[] = obj.transform;
-				setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
-				obj.draw();
-			}
+			if (!view3dCheck.getState())
+				for (i = 0; i != dragObjects.size(); i++) {
+					DragObject obj = dragObjects.get(i);
+					if (obj.selected)
+						setDrawingSelection(.6+.4*Math.sin(t*.2));
+					else
+						setDrawingSelection(-1);
+					double xform[] = obj.transform;
+					setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
+					obj.draw();
+				}
 			setTransform(1, 0, 0, 0, 1, 0);
 			setDrawingSelection(-1);
 			return;
@@ -1871,9 +1872,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		negMedColor = schemeColors[cn][5];
 		medColor = schemeColors[cn][6];
 		sourceColor = schemeColors[cn][7];
+		int zerocol3d = zeroColor.toInteger();
+		if (zerocol3d == 0)
+			zerocol3d = 0x808080;
 		setColors(wallColor.toInteger(), posColor.toInteger(), negColor.toInteger(),
 				zeroColor.toInteger(), posMedColor.toInteger(), negMedColor.toInteger(),
-				  medColor.toInteger(), sourceColor.toInteger());
+				  medColor.toInteger(), sourceColor.toInteger(), zerocol3d);
 	}
 
 	void addDefaultColorScheme() {
@@ -4577,6 +4581,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	void dragMouse(MouseEvent<?> event) {
 		if (view3dCheck.getState()) {
 			view3dDrag(event);
+			return;
 		}
 		if (!dragging)
 			selectSource(event);
@@ -4660,6 +4665,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		dragging = true;
 		edit(event);
 		
+		if (view3dCheck.getState())
+			return;
+
 		double minf = 22 * windowWidth/winSize.height;
 		double bestf = minf;
 		Point mp = getPointFromEvent(event);

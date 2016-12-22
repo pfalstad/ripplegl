@@ -29,7 +29,6 @@
 #define TS_COL_NEG_MED 5
 #define TS_COL_MED 6
 #define TS_COL_SOURCE 7
-#define TS_COL_SELECT 8
 #define TS_COL_COUNT  9
 
     precision mediump float;
@@ -179,13 +178,13 @@ med *= 1.5;
 #define TS_COL_WALL 0
 #define TS_COL_POS 1
 #define TS_COL_NEG 2
-#define TS_COL_NEUTRAL 3
+
 #define TS_COL_POS_MED 4
 #define TS_COL_NEG_MED 5
 #define TS_COL_MED 6
 #define TS_COL_SOURCE 7
-#define TS_COL_SELECT 8
-#define TS_COL_COUNT  9
+#define TS_COL_NEUTRAL 8
+#define TS_COL_COUNT 9
 
     attribute vec2 aTextureCoord;
     uniform mat4 uMVMatrix;
@@ -202,7 +201,8 @@ med *= 1.5;
     void main(void) {
 		vec2 tc = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
         vec4 pv = texture2D(uSampler, tc);
-        vPosition = uMVMatrix * vec4(-1.0+2.0*tc.x, -1.0+2.0*tc.y, pv.r, 1.0);
+		float r =  pv.r*brightness;
+        vPosition = uMVMatrix * vec4(-1.0+2.0*tc.x, -1.0+2.0*tc.y, r, 1.0);
         gl_Position = uPMatrix * vPosition;
         vTextureCoord = tc;
 		float med = pv.b;
@@ -210,7 +210,6 @@ med *= 1.5;
 		if (med == 0.0)
 			col = colors[TS_COL_WALL];
 		else {
-			float r =  pv.r*brightness;
 	        r = clamp(r, -1., 1.);
                 if (r > 0.0)
                         col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
