@@ -540,7 +540,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		reinit();
 		
-		handleResize();
 		// String os = Navigator.getPlatform();
 		// isMac = (os.toLowerCase().contains("mac"));
 		// ctrlMetaKey = (isMac) ? "Cmd" : "Ctrl";
@@ -661,45 +660,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	return null;
     }
     
-	void calcExceptions() {
-		int x, y;
-		// if walls are in place on border, need to extend that through
-		// hidden area to avoid "leaks"
-		for (x = 0; x != gridSizeX; x++)
-			for (y = 0; y < windowOffsetY; y++) {
-				walls[x + gw * y] = walls[x + gw * windowOffsetY];
-				walls[x + gw * (gridSizeY - y - 1)] = walls[x + gw
-						* (gridSizeY - windowOffsetY - 1)];
-			}
-		for (y = 0; y < gridSizeY; y++)
-			for (x = 0; x < windowOffsetX; x++) {
-				walls[x + gw * y] = walls[windowOffsetX + gw * y];
-				walls[gridSizeX - x - 1 + gw * y] = walls[gridSizeX
-						- windowOffsetX - 1 + gw * y];
-			}
-		// generate exceptional array, which is useful for doing
-		// special handling of elements
-		for (x = 1; x < gridSizeX - 1; x++)
-			for (y = 1; y < gridSizeY - 1; y++) {
-				int gi = x + gw * y;
-				exceptional[gi] = walls[gi - 1] || walls[gi + 1]
-						|| walls[gi - gw] || walls[gi + gw] || walls[gi]
-						|| medium[gi] != medium[gi - 1]
-						|| medium[gi] != medium[gi + 1];
-				if ((x == 1 || x == gridSizeX - 2)
-						&& medium[gi] != medium[gridSizeX - 1 - x + gw
-								* (y + 1)]
-						|| medium[gi] != medium[gridSizeX - 1 - x + gw
-								* (y - 1)])
-					exceptional[gi] = true;
-			}
-		// put some extra exceptions at the corners to ensure tadd2, sinth,
-		// etc get calculated
-		exceptional[1 + gw] = exceptional[gridSizeX - 2 + gw] = exceptional[1
-				+ (gridSizeY - 2) * gw] = exceptional[gridSizeX - 2
-				+ (gridSizeY - 2) * gw] = true;
-	}
-
 	void createWall(int x1, int y1, int x2, int y2) {
 		console("createwall " + x1 + " " + y1 + " " +x2 + " "  + y2);
 		Wall w = new Wall(x1-windowOffsetX, y1-windowOffsetY,
@@ -718,19 +678,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	void setMedium(int x, int y, int q) {
 		medium[x + gw * y] = q;
-	}
-
-	void doBorder() {
-		int x, y;
-		for (x = 0; x < gridSizeX; x++) {
-			setWall(x, windowOffsetY);
-			setWall(x, windowBottom);
-		}
-		for (y = 0; y < gridSizeY; y++) {
-			setWall(windowOffsetX, y);
-			setWall(windowRight, y);
-		}
-		calcExceptions();
 	}
 
     void doEdit(Editable eable) {
@@ -782,72 +729,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	}
 
-	void handleResize() {
-		logger.log(Level.SEVERE, cv.getOffsetWidth() +"," + cv.getOffsetHeight());
-//		Dimension d = winSize = new Dimension(cv.getOffsetWidth(),cv.getOffsetHeight());
-//		if (winSize.width == 0)
-//		    return;
-//		pixels = null;
-//		if (useBufferedImage) {
-//		    try {
-//		    	
-//		    	ImageData id = cvcontext.createImageData(d.width, d.height);
-//		    	pixels = id.getData().
-//			/* simulate the following code using reflection:
-//			   dbimage = new BufferedImage(d.width, d.height,
-//			   BufferedImage.TYPE_INT_RGB);
-//			   DataBuffer db = (DataBuffer)(((BufferedImage)dbimage).
-//			   getRaster().getDataBuffer());
-//			   DataBufferInt dbi = (DataBufferInt) db;
-//			   pixels = dbi.getData();
-//			*/
-//			Class biclass = Class.forName("java.awt.image.BufferedImage");
-//			Class dbiclass = Class.forName("java.awt.image.DataBufferInt");
-//			Class rasclass = Class.forName("java.awt.image.Raster");
-//			Constructor cstr = biclass.getConstructor(
-//			    new Class[] { int.class, int.class, int.class });
-//			dbimage = (Image) cstr.newInstance(new Object[] {
-//			    new Integer(d.width), new Integer(d.height),
-//			    new Integer(BufferedImage.TYPE_INT_RGB)});
-//			Method m = biclass.getMethod("getRaster", null);
-//			Object ras = m.invoke(dbimage, null);
-//			Object db = rasclass.getMethod("getDataBuffer", null).
-//			    invoke(ras, null);
-//			pixels = (int[])
-//			    dbiclass.getMethod("getData", null).invoke(db, null);
-//		    } catch (Exception ee) {
-//			// ee.printStackTrace();
-//		    	System.out.println("BufferedImage failed");
-//		    }
-//		}
-		/*
-		if (pixels == null) {
-//		    pixels = new int[d.width*d.height];
-//		    int i;
-//		    for (i = 0; i != d.width*d.height; i++)
-//		    	pixels[i] = 0xFF000000;
-		    int i;
-		    System.out.println(d.width + "," + d.height);
-		    data = cvcontext.createImageData(d.width, d.height);
-		    pixels = data.getData();
-		    for (i = 0; i < d.width; i++){
-		    	for (int j = 0; j < d.height; j++){
-//		    		data.setBlueAt(1, i, j);
-//		    		pixels.set(i*j, 200);
-		    		pixels.set(i*d.height*4 + j*4 + 0,0);
-		    		pixels.set(i*d.height*4 + j*4 + 1,0);
-		    		pixels.set(i*d.height*4 + j*4 + 2,0);
-		    		pixels.set(i*d.height*4 + j*4 + 3,255);
-		    	}
-		    }
-		    
-		    logger.log(Level.SEVERE, "Done");
-//		    CanvasElement el = cvcontext.getCanvas().
-		   
-		}
-		*/
-	}
-	
 	void drawWalls() {
 		doBlankWalls();
 		int i;
@@ -861,7 +742,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 	
 	public void updateRipple() {
-		if (cvcontext == null) {
 			if (changedWalls) {
 				drawWalls();
 				changedWalls = false;
@@ -900,756 +780,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				}
 			setTransform(1, 0, 0, 0, 1, 0);
 			setDrawingSelection(-1);
-			return;
-		}
-		
-		Graphics realg = new Graphics(backcontext);
-//		realg.setColor(Color.black);
-		realg.setFont(new Font("sans-serif", 1, 12));
-		
-		// winSize = realg.
-		// if (winSize == null || winSize.width == 0) {
-		// // this works around some weird bug in IE which causes the
-		// // applet to not show up properly sometimes.
-		// // handleResize();
-		// System.out.println("Cagada");
-		// return;
-		// }
-		if (increaseResolution) {
-			increaseResolution = false;
-			if (resBar.getValue() < 495)
-				setResolution(resBar.getValue() + 10);
-		}
-		long sysTime = (long) Duration.currentTimeMillis();
-		double tadd = 0;
-		if (!stoppedCheck.getState()) {
-			int val = 5; // speedBar.getValue();
-			tadd = val * .05;
-		}
-		int i, j;
-
-		System.out.println(dragging+","+selectedSource);
-		boolean stopFunc = dragging && selectedSource == -1
-				&& view3dCheck.getState() == false
-				&& modeChooser.getSelectedIndex() == MODE_SETFUNC;
-		if (stoppedCheck.getState())
-			stopFunc = true;
-		int iterCount = speedBar.getValue();
-		
-		System.out.println(String.valueOf(stopFunc)+"Rawr"+String.valueOf(stoppedCheck.getState()));
-		if (!stopFunc) {
-			/*
-			 * long sysTime = System.currentTimeMillis(); if (sysTime-secTime >=
-			 * 1000) { framerate = frames; steprate = steps; frames = 0; steps =
-			 * 0; secTime = sysTime; } lastTime = sysTime;
-			 */
-			int iter;
-			int mxx = gridSizeX - 1;
-			int mxy = gridSizeY - 1;
-			for (iter = 0; iter != iterCount; iter++) {
-				int jstart, jend, jinc;
-//				System.out.println(moveDown);
-				if (moveDown) {
-					// we process the rows in alternate directions
-					// each time to avoid any directional bias.
-					jstart = 1;
-					jend = mxy;
-					jinc = 1;
-					moveDown = false;
-				} else {
-					jstart = mxy - 1;
-					jend = 0;
-					jinc = -1;
-					moveDown = true;
-				}
-				moveRight = moveDown;
-				float sinhalfth = 0;
-				float sinth = 0;
-				float scaleo = 0;
-				int curMedium = -1;
-				for (j = jstart; j != jend; j += jinc) {
-					int istart, iend, iinc;
-					if (moveRight) {
-						iinc = 1;
-						istart = 1;
-						iend = mxx;
-						moveRight = false;
-					} else {
-						iinc = -1;
-						istart = mxx - 1;
-						iend = 0;
-						moveRight = true;
-					}
-					int gi = j * gw + istart;
-					int giEnd = j * gw + iend;
-					for (; gi != giEnd; gi += iinc) {
-						// calculate equilibrum point of this
-						// element's oscillation
-						float previ = func[gi - 1];
-						float nexti = func[gi + 1];
-						float prevj = func[gi - gw];
-						float nextj = func[gi + gw];
-						float basis = (nexti + previ + nextj + prevj) * .25f;
-						if (exceptional[gi]) {
-							if (curMedium != medium[gi]) {
-								curMedium = medium[gi];
-								double tadd2 = tadd
-										* (1 - (mediumMaxIndex / mediumMax)
-												* curMedium);
-								sinhalfth = (float) Math.sin(tadd2 / 2);
-								sinth = (float) (Math.sin(tadd2) * dampcoef);
-								scaleo = (float) (1 - Math.sqrt(4 * sinhalfth
-										* sinhalfth - sinth * sinth));
-							}
-							if (walls[gi])
-								continue;
-							int count = 4;
-							if (fixedEndsCheck.getState()) {
-								if (walls[gi - 1])
-									previ = 0;
-								if (walls[gi + 1])
-									nexti = 0;
-								if (walls[gi - gw])
-									prevj = 0;
-								if (walls[gi + gw])
-									nextj = 0;
-							} else {
-								if (walls[gi - 1])
-									previ = walls[gi + 1] ? func[gi]
-											: func[gi + 1];
-								if (walls[gi + 1])
-									nexti = walls[gi - 1] ? func[gi]
-											: func[gi - 1];
-								if (walls[gi - gw])
-									prevj = walls[gi + gw] ? func[gi] : func[gi
-											+ gw];
-								if (walls[gi + gw])
-									nextj = walls[gi - gw] ? func[gi] : func[gi
-											- gw];
-							}
-							basis = (nexti + previ + nextj + prevj) * .25f;
-						}
-						// what we are doing here (aside from damping)
-						// is rotating the point (func[gi], funci[gi])
-						// an angle tadd about the point (basis, 0).
-						// Rather than call atan2/sin/cos, we use this
-						// faster method using some precomputed info.
-						Float a = 0f;
-						Float b = 0f;
-						if (damp[gi] == 1f) {
-							a = func[gi] - basis;
-							b = funci[gi];
-						} else {
-							a = (func[gi] - basis) * damp[gi];
-							b = funci[gi] * damp[gi];
-						}
-						func[gi] = basis + a * scaleo - b * sinth;
-						funci[gi] = b * scaleo + a * sinth;
-					}
-				}
-				setup.eachFrame();
-				steps++;
-				filterGrid();
-			}
-		}
-
-		if (view3dCheck.getState())
-			draw3dView();
-//		else
-//			draw2dView();
-
-		// if (imageSource != null)
-		// imageSource.newPixels();
-		System.out.println(dragStartX+"," + view3dCheck.getState());
-		cvcontext.putImageData(data, 0, 0);
-
-		if (dragStartX >= 0 && !view3dCheck.getState()) {
-			int x = dragStartX * windowWidth / winSize.width;
-			int y = windowHeight - 1
-					- (dragStartY * windowHeight / winSize.height);
-			String s = "(" + x + "," + y + ")";
-			realg.setColor(Color.white);
-			Font fm = realg.getFont();
-			int h = 5 + fm.size;
-			realg.fillRect(0, winSize.height - h, fm.size + 10, h);
-			realg.setColor(Color.black);
-			realg.drawString(s, 5, winSize.height - 5);
-		}
-
-		/*
-		 * frames++; realg.setColor(Color.white); realg.drawString("Framerate: "
-		 * + framerate, 10, 10); realg.drawString("Steprate: " + steprate, 10,
-		 * 30); lastFrameTime = lastTime;
-		 */
-
-		if (!stoppedCheck.getState()) {
-			long diff = (long) Duration.currentTimeMillis() - sysTime;
-			// we want the time it takes for a wave to travel across the screen
-			// to be more-or-less constant, but don't do anything after 5
-			// seconds
-			if (adjustResolution && diff > 0 && sysTime < startTime + 1000
-					&& windowOffsetX * diff / iterCount < 55) {
-				increaseResolution = true;
-				startTime = sysTime;
-			}
-//			if (dragging && selectedSource == -1
-//					&& modeChooser.getSelectedIndex() == MODE_FUNCHOLD)
-//				editFuncPoint(dragX, dragY);
-
-			// cv.repaint(0);
-		}
-//		cvcontext.drawImage(backcontext.getCanvas(), 0.0, 0.0);
-	}
-
-	/*
-	void doSources(double tadd) {
-		t += tadd;
-		if (sourceCount > 0) {
-			double w = freqBar.getValue() * (t - freqTimeZero)
-					* freqMult;
-			double w2 = w;
-			boolean skip = false;
-			switch (auxFunction) {
-			case AUX_FREQ:
-				w2 = auxBar.getValue() * t * freqMult;
-				break;
-			case AUX_PHASE:
-				w2 = w + (auxBar.getValue() - 1) * (pi / 29);
-				break;
-			}
-			double v = 0;
-			double v2 = 0;
-			switch (sourceWaveform) {
-			case SWF_SIN:
-				v = Math.cos(w);
-				if (sourceCount >= (sourcePlane ? 4 : 2))
-					v2 = Math.cos(w2);
-				else if (sourceFreqCount == 2)
-					v = (v + Math.cos(w2)) * .5;
-				break;
-			case SWF_SQUARE:
-				w %= pi * 2;
-				v = (w < pi) ? 1 : -1;
-				break;
-			case SWF_PULSE: {
-				w %= pi * 2;
-				double pulselen = pi / 4;
-				double pulselen2 = freqBar.getValue() * .2;
-				if (pulselen2 < pulselen)
-					pulselen = pulselen2;
-				v = (w > pulselen) ? 0 : Math.sin(w * pi / pulselen);
-				if (w > pulselen * 2)
-					skip = true;
-			}
-				break;
-			}
-			int j;
-			for (j = 0; j != sourceCount; j++) {
-				if ((j % 2) == 0)
-					sources[j].v = (float) (v * setup.sourceStrength());
-				else
-					sources[j].v = (float) (v2 * setup.sourceStrength());
-			}
-			if (sourcePlane) {
-				if (!skip) {
-					for (j = 0; j != sourceCount / 2; j++) {
-						OscSource src1 = sources[j * 2];
-						OscSource src2 = sources[j * 2 + 1];
-						OscSource src3 = sources[j];
-						drawLineSource(src1.x, src1.y, src2.x, src2.y,
-								src3.v); // , w);
-					}
-				}
-			} else {
-				if (sourceMoving) {
-					int sy;
-					movingSourcePos += tadd * .02 * auxBar.getValue();
-					double wm = movingSourcePos;
-					int h = windowHeight - 3;
-					wm %= h * 2;
-					sy = (int) wm;
-					if (sy > h)
-						sy = 2 * h - sy;
-					sy += windowOffsetY + 1;
-					sources[0].y = sy;
-				}
-				int i;
-				for (i = 0; i != sourceCount; i++) {
-					OscSource src = sources[i];
-					drawSource(src.x, src.y, src.v);
-				}
-			}
-		}
-	}
-	*/
-	
-	// filter out high-frequency noise
-	int filterCount;
-
-	void filterGrid() {
-		int x, y;
-		if (fixedEndsCheck.getState())
-			return;
-		if (sourceCount > 0 && freqBarValue > 23)
-			return;
-		if (sourceFreqCount >= 2 && auxBar.getValue() > 23)
-			return;
-		if (++filterCount < 10)
-			return;
-		filterCount = 0;
-		for (y = windowOffsetY; y < windowBottom; y++)
-			for (x = windowOffsetX; x < windowRight; x++) {
-				int gi = x + y * gw;
-				if (walls[gi])
-					continue;
-				if (func[gi - 1] < 0 && func[gi] > 0 && func[gi + 1] < 0
-						&& !walls[gi + 1] && !walls[gi - 1])
-					func[gi] = (func[gi - 1] + func[gi + 1]) / 2;
-				if (func[gi - gw] < 0 && func[gi] > 0 && func[gi + gw] < 0
-						&& !walls[gi - gw] && !walls[gi + gw])
-					func[gi] = (func[gi - gw] + func[gi + gw]) / 2;
-				if (func[gi - 1] > 0 && func[gi] < 0 && func[gi + 1] > 0
-						&& !walls[gi + 1] && !walls[gi - 1])
-					func[gi] = (func[gi - 1] + func[gi + 1]) / 2;
-				if (func[gi - gw] > 0 && func[gi] < 0 && func[gi + gw] > 0
-						&& !walls[gi - gw] && !walls[gi + gw])
-					func[gi] = (func[gi - gw] + func[gi + gw]) / 2;
-			}
-	}
-
-	void plotPixel(int x, int y, int pix) {
-		if (x < 0 || x >= winSize.width){
-			System.out.println("return");
-			return;
-		}
-//		logger.log(Level.SEVERE,"no ret" + x + "," + y);
-		try {
-//			pixels[x + y * winSize.width] = pix;
-//			data.setBlueAt(1, x,y);
-//			pixels.set(x+y * winSize.width, 200);
-			pixels.set(x*4 + y*winSize.width*4 + 0,Color.hex2Rgb(String.valueOf(pix)).getRed());
-    		pixels.set(x*4 + y*winSize.width*4 + 1,Color.hex2Rgb(String.valueOf(pix)).getGreen());
-    		pixels.set(x*4 + y*winSize.width*4 + 2,Color.hex2Rgb(String.valueOf(pix)).getBlue());
-    		pixels.set(x*4 + y*winSize.width*4 + 3,255);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, e.getMessage());
-		}
-	}
-
-	// draw a circle the slow and dirty way
-	void plotSource(int n, int xx, int yy) {
-		int rad = sourceRadius;
-		int j;
-		int col = (sourceColor.getRed() << 16) | (sourceColor.getGreen() << 8)
-				| (sourceColor.getBlue()) | 1;
-		
-		
-		
-		if (n == selectedSource)
-			col ^= 255;
-		
-//		logger.log(Level.SEVERE, col+"");
-		for (j = 0; j <= rad; j++) {
-			int k = (int) (Math.sqrt(rad * rad - j * j) + .5);
-			plotPixel(xx + j, yy + k, col);
-			plotPixel(xx + k, yy + j, col);
-			plotPixel(xx + j, yy - k, col);
-			plotPixel(xx - k, yy + j, col);
-			plotPixel(xx - j, yy + k, col);
-			plotPixel(xx + k, yy - j, col);
-			plotPixel(xx - j, yy - k, col);
-			plotPixel(xx - k, yy - j, col);
-			plotPixel(xx, yy + j, col);
-			plotPixel(xx, yy - j, col);
-			plotPixel(xx + j, yy, col);
-			plotPixel(xx - j, yy, col);
-		}
-	}
-
-	double realxmx, realxmy, realymz, realzmy, realzmx, realymadd, realzmadd;
-	double viewAngle = pi, viewAngleDragStart;
-	double viewZoom = .775, viewZoomDragStart;
-	double viewAngleCos = -1, viewAngleSin = 0;
-	double viewHeight = -38, viewHeightDragStart;
-	double scalex, scaley;
-	int centerX3d, centerY3d;
-	int xpoints[] = new int[4], ypoints[] = new int[4];
-	final double viewDistance = 66;
-
-	void map3d(double x, double y, double z, int xpoints[], int ypoints[],
-			int pt) {
-		/*
-		 * x *= aspectRatio; z *= -4; x *= 16./sampleCount; y *=
-		 * 16./sampleCount; double realx = x*viewAngleCos + y*viewAngleSin; //
-		 * range: [-10,10] double realy = z-viewHeight; double realz =
-		 * y*viewAngleCos - x*viewAngleSin + viewDistance;
-		 */
-		double realx = realxmx * x + realxmy * y;
-		double realy = realymz * z + realymadd;
-		double realz = realzmx * x + realzmy * y + realzmadd;
-		xpoints[pt] = centerX3d + (int) (realx / realz);
-		ypoints[pt] = centerY3d - (int) (realy / realz);
-	}
-
-	double scaleMult;
-
-	void scaleworld() {
-		scalex = viewZoom * (winSize.width / 4) * viewDistance / 8;
-		scaley = -scalex;
-		int y = (int) (scaley * viewHeight / viewDistance);
-		/*
-		 * centerX3d = winSize.x + winSize.width/2; centerY3d = winSize.y +
-		 * winSize.height/2 - y;
-		 */
-		centerX3d = winSize.width / 2;
-		centerY3d = winSize.height / 2 - y;
-		scaleMult = 16. / (windowWidth / 2);
-		realxmx = -viewAngleCos * scaleMult * scalex;
-		realxmy = viewAngleSin * scaleMult * scalex;
-		realymz = -brightMult * scaley;
-		realzmy = viewAngleCos * scaleMult;
-		realzmx = viewAngleSin * scaleMult;
-		realymadd = -viewHeight * scaley;
-		realzmadd = viewDistance;
-	}
-
-	void draw3dView() {
-		int half = gridSizeX / 2;
-		scaleworld();
-		int x, y;
-		int xdir, xstart, xend;
-		int ydir, ystart, yend;
-		int sc = windowRight - 1;
-
-		// figure out what order to render the grid elements so that
-		// the ones in front are rendered first.
-		if (viewAngleCos > 0) {
-			ystart = sc;
-			yend = windowOffsetY - 1;
-			ydir = -1;
-		} else {
-			ystart = windowOffsetY;
-			yend = sc + 1;
-			ydir = 1;
-		}
-		if (viewAngleSin < 0) {
-			xstart = windowOffsetX;
-			xend = sc + 1;
-			xdir = 1;
-		} else {
-			xstart = sc;
-			xend = windowOffsetX - 1;
-			xdir = -1;
-		}
-		boolean xFirst = (viewAngleSin * xdir < viewAngleCos * ydir);
-
-		for (x = 0; x != winSize.width; x++){
-			for(int j = 0; j != winSize.height; j++){
-				pixels.set(x* winSize.height*4+ j*4+0, 0);
-				pixels.set(x* winSize.height*4+ j*4+1, 0);
-				pixels.set(x* winSize.height*4+ j*4+2, 0);
-				pixels.set(x* winSize.height*4+ j*4+3, 255);
-			}
-		}
-//			pixels[x] = 0xFF000000;
-		/*
-		 * double zval = 2.0/sampleCount; System.out.println(zval); if
-		 * (sampleCount == 128) zval = .1;
-		 */
-		double zval = .1;
-		double zval2 = zval * zval;
-
-		for (x = xstart; x != xend; x += xdir) {
-			for (y = ystart; y != yend; y += ydir) {
-				if (!xFirst)
-					x = xstart;
-				for (; x != xend; x += xdir) {
-					int gi = x + gw * y;
-					map3d(x - half, y - half, func[gi], xpoints, ypoints, 0);
-					map3d(x + 1 - half, y - half, func[gi + 1], xpoints,
-							ypoints, 1);
-					map3d(x - half, y + 1 - half, func[gi + gw], xpoints,
-							ypoints, 2);
-					map3d(x + 1 - half, y + 1 - half, func[gi + gw + 1],
-							xpoints, ypoints, 3);
-					double qx = func[gi + 1] - func[gi];
-					double qy = func[gi + gw] - func[gi];
-					// calculate lighting
-					double normdot = (qx + qy + zval) * (1 / 1.73)
-							/ Math.sqrt(qx * qx + qy * qy + zval2);
-					int[] col = computeColor(gi, normdot);
-					fillTriangle(xpoints[0], ypoints[0], xpoints[1],
-							ypoints[1], xpoints[3], ypoints[3], col);
-					fillTriangle(xpoints[0], ypoints[0], xpoints[2],
-							ypoints[2], xpoints[3], ypoints[3], col);
-					if (xFirst)
-						break;
-				}
-			}
-			if (!xFirst)
-				break;
-		}
-	}
-
-	int[] computeColor(int gix, double c) {
-		double h = func[gix] * brightMult;
-		if (c < 0)
-			c = 0;
-		if (c > 1)
-			c = 1;
-		c = .5 + c * .5;
-		double redness = (h < 0) ? -h : 0;
-		double grnness = (h > 0) ? h : 0;
-		if (redness > 1)
-			redness = 1;
-		if (grnness > 1)
-			grnness = 1;
-		if (grnness < 0)
-			grnness = 0;
-		if (redness < 0)
-			redness = 0;
-		double grayness = (1 - (redness + grnness)) * c;
-		double grayness2 = grayness;
-		if (medium[gix] > 0) {
-			double mm = 1 - (medium[gix] * (1 / 255.01));
-			grayness2 *= mm;
-		}
-		double gray = .6;
-		int ri = (int) ((c * redness + gray * grayness2) * 255);
-		int gi = (int) ((c * grnness + gray * grayness2) * 255);
-		int bi = (int) ((gray * grayness) * 255);
-		int[] ret = new int[3];
-		ret[0] = ri;
-		ret[1] = gi;
-		ret[2] = bi;
-		return ret;
-//		return 0xFF000000 | (ri << 16) | (gi << 8) | bi;
-	}
-
-	void fillTriangle(int x1, int y1, int x2, int y2, int x3, int y3, int[] col) {
-		if (x1 > x2) {
-			if (x2 > x3) {
-				// x1 > x2 > x3
-				int ay = interp(x1, y1, x3, y3, x2);
-				fillTriangle1(x3, y3, x2, y2, ay, col);
-				fillTriangle1(x1, y1, x2, y2, ay, col);
-			} else if (x1 > x3) {
-				// x1 > x3 > x2
-				int ay = interp(x1, y1, x2, y2, x3);
-				fillTriangle1(x2, y2, x3, y3, ay, col);
-				fillTriangle1(x1, y1, x3, y3, ay, col);
-			} else {
-				// x3 > x1 > x2
-				int ay = interp(x3, y3, x2, y2, x1);
-				fillTriangle1(x2, y2, x1, y1, ay, col);
-				fillTriangle1(x3, y3, x1, y1, ay, col);
-			}
-		} else {
-			if (x1 > x3) {
-				// x2 > x1 > x3
-				int ay = interp(x2, y2, x3, y3, x1);
-				fillTriangle1(x3, y3, x1, y1, ay, col);
-				fillTriangle1(x2, y2, x1, y1, ay, col);
-			} else if (x2 > x3) {
-				// x2 > x3 > x1
-				int ay = interp(x2, y2, x1, y1, x3);
-				fillTriangle1(x1, y1, x3, y3, ay, col);
-				fillTriangle1(x2, y2, x3, y3, ay, col);
-			} else {
-				// x3 > x2 > x1
-				int ay = interp(x3, y3, x1, y1, x2);
-				fillTriangle1(x1, y1, x2, y2, ay, col);
-				fillTriangle1(x3, y3, x2, y2, ay, col);
-			}
-		}
-	}
-
-	int interp(int x1, int y1, int x2, int y2, int x) {
-		if (x1 == x2)
-			return y1;
-		if (x < x1 && x < x2 || x > x1 && x > x2)
-			System.out.print("interp out of bounds\n");
-		return (int) (y1 + ((double) x - x1) * (y2 - y1) / (x2 - x1));
-	}
-
-	void fillTriangle1(int x1, int y1, int x2, int y2, int y3, int col[]) {
-		// x2 == x3
-		int dir = (x1 > x2) ? -1 : 1;
-		int x = x1;
-		if (x < 0) {
-			x = 0;
-			if (x2 < 0)
-				return;
-		}
-		if (x >= winSize.width) {
-			x = winSize.width - 1;
-			if (x2 >= winSize.width)
-				return;
-		}
-		if (y2 > y3) {
-			int q = y2;
-			y2 = y3;
-			y3 = q;
-		}
-		// y2 < y3
-		while (x != x2 + dir) {
-			// XXX this could be speeded up
-			int ya = interp(x1, y1, x2, y2, x);
-			int yb = interp(x1, y1, x2, y3, x);
-			if (ya < 0)
-				ya = 0;
-			if (yb >= winSize.height)
-				yb = winSize.height - 1;
-
-			for (; ya <= yb; ya++)
-				pixels.set(x*4 + ya * winSize.width*4 + 0, col[0]);
-				pixels.set(x*4 + ya * winSize.width*4 + 1, col[1]);
-				pixels.set(x*4 + ya * winSize.width*4 + 2, col[2]);
-				pixels.set(x*4 + ya * winSize.width*4 + 3, 200);
-//				pixels[x + ya * winSize.width] = col;
-			x += dir;
-			if (x < 0 || x >= winSize.width)
-				return;
-		}
 	}
 
 	int abs(int x) {
 		return x < 0 ? -x : x;
 	}
 
-	void drawPlaneSource(int x1, int y1, int x2, int y2, float v, double w) {
-		if (y1 == y2) {
-			if (x1 == windowOffsetX)
-				x1 = 0;
-			if (x2 == windowOffsetX)
-				x2 = 0;
-			if (x1 == windowOffsetX + windowWidth - 1)
-				x1 = gridSizeX - 1;
-			if (x2 == windowOffsetX + windowWidth - 1)
-				x2 = gridSizeX - 1;
-		}
-		if (x1 == x2) {
-			if (y1 == windowOffsetY)
-				y1 = 0;
-			if (y2 == windowOffsetY)
-				y2 = 0;
-			if (y1 == windowOffsetY + windowHeight - 1)
-				y1 = gridSizeY - 1;
-			if (y2 == windowOffsetY + windowHeight - 1)
-				y2 = gridSizeY - 1;
-		}
-
-		/*
-		 * double phase = 0; if (sourceChooser.getSelectedIndex() ==
-		 * SRC_1S1F_PLANE_PHASE) phase =
-		 * (auxBar.getValue()-15)*3.8*freqBar.getValue()*freqMult;
-		 */
-
-		// need to draw a line from x1,y1 to x2,y2
-		if (x1 == x2 && y1 == y2) {
-			func[x1 + gw * y1] = v;
-			funci[x1 + gw * y1] = 0;
-		} else if (abs(y2 - y1) > abs(x2 - x1)) {
-			// y difference is greater, so we step along y's
-			// from min to max y and calculate x for each step
-			double sgn = sign(y2 - y1);
-			int x, y;
-			for (y = y1; y != y2 + sgn; y += sgn) {
-				x = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
-				double ph = sgn * (y - y1) / (y2 - y1);
-				int gi = x + gw * y;
-				func[gi] = setup.calcSourcePhase(ph, v, w);
-				// (phase == 0) ? v :
-				// (float) (Math.sin(w+ph));
-				funci[gi] = 0;
-			}
-		} else {
-			// x difference is greater, so we step along x's
-			// from min to max x and calculate y for each step
-			double sgn = sign(x2 - x1);
-			int x, y;
-			for (x = x1; x != x2 + sgn; x += sgn) {
-				y = y1 + (y2 - y1) * (x - x1) / (x2 - x1);
-				double ph = sgn * (x - x1) / (x2 - x1);
-				int gi = x + gw * y;
-				func[gi] = setup.calcSourcePhase(ph, v, w);
-				// (phase == 0) ? v :
-				// (float) (Math.sin(w+ph));
-				funci[gi] = 0;
-			}
-		}
-	}
-
 	int sign(int x) {
 		return (x < 0) ? -1 : (x == 0) ? 0 : 1;
-	}
-
-	void edit(MouseEvent e) {
-		if (view3dCheck.getState())
-			return;
-		int x = e.getX();
-		int y = e.getY();
-		if (selectedSource != -1) {
-			x = x * windowWidth / winSize.width;
-			y = y * windowHeight / winSize.height;
-			if (x >= 0 && y >= 0 && x < windowWidth && y < windowHeight) {
-				sources[selectedSource].x = x + windowOffsetX;
-				sources[selectedSource].y = y + windowOffsetY;
-			}
-			return;
-		}
-		/*
-		if (dragX == x && dragY == y)
-			editFuncPoint(x, y);
-		else {
-			// need to draw a line from old x,y to new x,y and
-			// call editFuncPoint for each point on that line. yuck.
-			if (abs(y - dragY) > abs(x - dragX)) {
-				// y difference is greater, so we step along y's
-				// from min to max y and calculate x for each step
-				int x1 = (y < dragY) ? x : dragX;
-				int y1 = (y < dragY) ? y : dragY;
-				int x2 = (y > dragY) ? x : dragX;
-				int y2 = (y > dragY) ? y : dragY;
-				dragX = x;
-				dragY = y;
-				for (y = y1; y <= y2; y++) {
-					x = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
-					editFuncPoint(x, y);
-				}
-			} else {
-				// x difference is greater, so we step along x's
-				// from min to max x and calculate y for each step
-				int x1 = (x < dragX) ? x : dragX;
-				int y1 = (x < dragX) ? y : dragY;
-				int x2 = (x > dragX) ? x : dragX;
-				int y2 = (x > dragX) ? y : dragY;
-				dragX = x;
-				dragY = y;
-				for (x = x1; x <= x2; x++) {
-					y = y1 + (y2 - y1) * (x - x1) / (x2 - x1);
-					editFuncPoint(x, y);
-				}
-			}
-		}
-		*/
-	}
-
-	void selectSource(MouseEvent me) {
-		int x = me.getX();
-		int y = me.getY();
-		int i;
-		for (i = 0; i != sourceCount; i++) {
-			OscSource src = sources[i];
-			int sx = src.getScreenX();
-			int sy = src.getScreenY();
-			int r2 = (sx - x) * (sx - x) + (sy - y) * (sy - y);
-			if (sourceRadius * sourceRadius > r2) {
-				selectedSource = i;
-				return;
-			}
-		}
-		selectedSource = -1;
 	}
 
 	void setDamping() {
@@ -1659,37 +797,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		 */
 		dampcoef = 1;
 	}
-
-	// public void componentHidden(ComponentEvent e) {
-	// }
-	//
-	// public void componentMoved(ComponentEvent e) {
-	// }
-	//
-	// public void componentShown(ComponentEvent e) {
-	// cv.repaint();
-	// }
-	//
-	// public void componentResized(ComponentEvent e) {
-	// handleResize();
-	// cv.repaint(100);
-	// }
-	//
-	//
-	//
-	// public void adjustmentValueChanged(AdjustmentEvent e) {
-	// System.out.print(((Scrollbar) e.getSource()).getValue() + "\n");
-	// if (e.getSource() == resBar) {
-	// setResolution();
-	// reinit();
-	// }
-	// if (e.getSource() == dampingBar)
-	// setDamping();
-	// if (e.getSource() == brightnessBar)
-	// cv.repaint(0);
-	// if (e.getSource() == freqBar)
-	// setFreq();
-	// }
 
 	void setFreqBar(int x) {
 		freqBar.setValue(x);
@@ -1744,83 +851,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		// reinit();
 	}
 
-	/*
-	public void mouseDragged(MouseEvent e) {
-		if (view3dCheck.getState()) {
-			view3dDrag(e);
-		}
-		if (!dragging)
-			selectSource(e);
-		dragging = true;
-		edit(e);
-		adjustResolution = false;
-		// cv.repaint(0);
-	}
-*/
-	
 	void view3dDrag(MouseEvent e) {
 		int x = e.getX();
 		int y = e.getY();
-		viewAngle = (dragStartX - x) / 40. + viewAngleDragStart;
-		while (viewAngle < 0)
-			viewAngle += 2 * pi;
-		while (viewAngle >= 2 * pi)
-			viewAngle -= 2 * pi;
-		viewAngleCos = Math.cos(viewAngle);
-		viewAngleSin = Math.sin(viewAngle);
-		viewHeight = (dragStartY - y) / 10. + viewHeightDragStart;
 		set3dViewAngle(x-dragX, y-dragY);
 		dragX = x;
 		dragY = y;
-
-		/*
-		 * viewZoom = (y-dragStartY)/40. + viewZoomDragStart; if (viewZoom < .1)
-		 * viewZoom = .1; System.out.println(viewZoom);
-		 */
-		// cv.repaint();
 	}
-
-	// public void mouseClicked(MouseEvent e) {
-	// }
-	//
-	// public void mouseEntered(MouseEvent e) {
-	// }
-	//
-	// public void mouseExited(MouseEvent e) {
-	// dragStartX = -1;
-	// }
-	//
-	// public void mousePressed(MouseEvent e) {
-	// adjustResolution = false;
-	// mouseMoved(e);
-	// if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
-	// return;
-	// dragging = true;
-	// edit(e);
-	// }
-	//
-	// public void mouseReleased(MouseEvent e) {
-	// if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
-	// return;
-	// dragging = false;
-	// dragSet = dragClear = false;
-	// cv.repaint();
-	// }
-	//
-	// public void itemStateChanged(ItemEvent e) {
-	// if (e.getItemSelectable() == stoppedCheck) {
-	// cv.repaint();
-	// return;
-	// }
-	// if (e.getItemSelectable() == sourceChooser) {
-	// if (sourceChooser.getSelectedIndex() != sourceIndex)
-	// setSources();
-	// }
-	// if (e.getItemSelectable() == setupChooser)
-	// doSetup();
-	// if (e.getItemSelectable() == colorChooser)
-	// doColor();
-	// }
 
 	void deleteAllObjects() {
 		dragObjects.removeAllElements();
@@ -1853,9 +890,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		} else
 			for (i = 0; i != sourceCount; i++)
 				dragObjects.add(new Source(sources[i].x-windowOffsetX, sources[i].y-windowOffsetY));
-		calcExceptions();
 		setDamping();
-		// System.out.println("setup " + setupChooser.getSelectedIndex());
 	}
 
 	void setBrightness(int x) {
@@ -2164,56 +1199,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			p += l;
 
 		}
-		calcExceptions();
 		setDamping();
 	}
-
-	// class ImportDialogLayout implements LayoutManager {
-	// public ImportDialogLayout() {
-	// }
-	//
-	// public void addLayoutComponent(String name, Component c) {
-	// }
-	//
-	// public void removeLayoutComponent(Component c) {
-	// }
-	//
-	// public Dimension preferredLayoutSize(Container target) {
-	// return new Dimension(500, 500);
-	// }
-	//
-	// public Dimension minimumLayoutSize(Container target) {
-	// return new Dimension(100, 100);
-	// }
-	//
-	// public void layoutContainer(Container target) {
-	// Insets insets = target.insets();
-	// int targetw = target.size().width - insets.left - insets.right;
-	// int targeth = target.size().height - (insets.top + insets.bottom);
-	// int i;
-	// int pw = 300;
-	// if (target.getComponentCount() == 0)
-	// return;
-	// Component cl = target.getComponent(target.getComponentCount() - 1);
-	// Dimension dl = cl.getPreferredSize();
-	// target.getComponent(0).move(insets.left, insets.top);
-	// int cw = target.size().width - insets.left - insets.right;
-	// int ch = target.size().height - insets.top - insets.bottom
-	// - dl.height;
-	// target.getComponent(0).resize(cw, ch);
-	// int h = ch + insets.top;
-	// int x = 0;
-	// for (i = 1; i < target.getComponentCount(); i++) {
-	// Component m = target.getComponent(i);
-	// if (m.isVisible()) {
-	// Dimension d = m.getPreferredSize();
-	// m.move(insets.left + x, h);
-	// m.resize(d.width, d.height);
-	// x += d.width;
-	// }
-	// }
-	// }
-	// };
 
 	 class ImportDialog extends Composite implements ClickHandler {
 	
@@ -2841,7 +1828,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				for (i = windowOffsetY; i < w3; i++)
 					setWall(gridSizeX / 2, i);
 				setWall(gridSizeX / 2, i, false);
-				calcExceptions();
 			}
 			if (w2 == windowOffsetY + windowHeight / 4
 					|| w2 == windowOffsetY + windowHeight * 3 / 4) {
@@ -4575,9 +3561,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		dragPoint = getPointFromEvent(event);
 		dragStartX = dragX = x;
 		dragStartY = dragY = y;
-		viewAngleDragStart = viewAngle;
-		viewHeightDragStart = viewHeight;
-		selectSource(event);
 	}
 
 	void dragMouse(MouseEvent<?> event) {
@@ -4585,10 +3568,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			view3dDrag(event);
 			return;
 		}
-		if (!dragging)
-			selectSource(event);
 		dragging = true;
-		edit(event);
 		adjustResolution = false;
 
 		Point pt = getPointFromEvent(event);
@@ -4605,23 +3585,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		} else
 			drawPoke(pt.x, pt.y);
 	}
-	
-	/*
-	public void mouseMoved(MouseEvent e) {
-		// this is old and not used anymore, get rid of it!
-		if (dragging)
-			return;
-		int x = e.getX();
-		int y = e.getY();
-		dragStartX = dragX = x;
-		dragStartY = dragY = y;
-		viewAngleDragStart = viewAngle;
-		viewHeightDragStart = viewHeight;
-		selectSource(e);
-		// if (stoppedCheck.getState())
-		// cv.repaint(0);
-	}
-*/
 	
 	void enableDisableUI() {
 		int i;
@@ -4657,15 +3620,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	public void onMouseDown(MouseDownEvent event) {
 		adjustResolution = false;
 		doMouseMove(event);
-//		mouseMoved(event);
 		if (rotationMode) {
 			rotationMode = false;
 			return;
 		}
-//		if ((event.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
-//		    return;
 		dragging = true;
-		edit(event);
 		
 		if (view3dCheck.getState())
 			return;
@@ -4714,21 +3673,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		if (selectedObject == null && !clearingSelection)
 			drawPoke(mp.x, mp.y);
-		
-		/*
-		handler = cv.addMouseMoveHandler(new MouseMoveHandler(){
-            public void onMouseMove(MouseMoveEvent e) {
-            	if (view3dCheck.getState()) {
-            	    view3dDrag(e);
-            	}
-            	if (!dragging)
-            	    selectSource(e);
-            	dragging = true;
-            	edit(e);
-            	adjustResolution = false;
-            }
-      });
-      */
 	}
 	
 	void setSelectedObject(DragObject obj) {
