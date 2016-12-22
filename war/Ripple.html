@@ -199,7 +199,7 @@ med *= 1.5;
     uniform lowp vec3 colors[TS_COL_COUNT];
 
     void main(void) {
-		vec2 tc = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
+		vec2 tc  = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
         vec4 pv = texture2D(uSampler, tc);
 		float r =  pv.r*brightness;
         vPosition = uMVMatrix * vec4(-1.0+2.0*tc.x, -1.0+2.0*tc.y, r, 1.0);
@@ -210,13 +210,21 @@ med *= 1.5;
 		if (med == 0.0)
 			col = colors[TS_COL_WALL];
 		else {
-	        r = clamp(r, -1., 1.);
+			// calculate normal
+			float qx = texture2D(uSampler, vec2(aTextureCoord.x+xOffset+1./200., aTextureCoord.y)).r-pv.r;
+			float qy = texture2D(uSampler, vec2(aTextureCoord.x+xOffset, aTextureCoord.y+1./200.)).r-pv.r;
+			qx *= brightness;  qy *= brightness;
+
+			// calculate lighting
+			float normdot = (qx+qy+0.1)*(1./1.73)/length(vec3(qx, qy, 0.1));
+	        r = 20.*clamp(r, -1., 1.);
                 if (r > 0.0)
                         col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
                       mix(colors[TS_COL_POS_MED], colors[TS_COL_POS], med), r);
                 else
                         col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
                       mix(colors[TS_COL_NEG_MED], colors[TS_COL_NEG], med), -r);
+			col = mix(col, vec3(1., 1., 1.), normdot);
 		}
         vColor = vec4(col, 1.);
 
