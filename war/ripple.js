@@ -106,7 +106,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     var mvMatrix = mat4.create();
     var mvMatrixStack = [];
     var pMatrix = mat4.create();
-
+    var matrix3d = mat4.create();
+    
     function mvPushMatrix() {
         var copy = mat4.create();
         mat4.set(mvMatrix, copy);
@@ -888,10 +889,11 @@ var transform = [1, 0, 0, 1, 0, 0];
         mvPushMatrix();
 
         mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
-        mat4.translate(mvMatrix, [0, -0.4, -3.2]);
-        mat4.rotate(mvMatrix, degToRad(laptopAngle), [0, 1, 0]);
-        mat4.rotate(mvMatrix, degToRad(-60), [1, 0, 0]);
-        mat4.rotateZ(mvMatrix, viewAngle);
+        mat4.translate(mvMatrix, [0, 0, -3.2]);
+        mat4.multiply(mvMatrix, matrix3d, mvMatrix);
+//        mat4.rotate(mvMatrix, degToRad(laptopAngle), [0, 1, 0]);
+//        mat4.rotate(mvMatrix, degToRad(-60), [1, 0, 0]);
+//        mat4.rotateZ(mvMatrix, viewAngle);
 //        mat4.rotateX(mvMatrix, Math.PI/4, mvMatrix);
         
 	// draw result
@@ -901,7 +903,7 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, renderTexture1.texture);
         gl.uniform1i(shaderProgram3D.samplerUniform, 0);
-        gl.uniform1f(shaderProgram3D.brightnessUniform, bright);
+        gl.uniform1f(shaderProgram3D.brightnessUniform, bright*.1);
         gl.uniform3fv(shaderProgram3D.colorsUniform, colors);
 
         setMatrixUniforms(shaderProgram3D);
@@ -956,6 +958,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	initShaders();
     	initBuffers();
     	initTextures();
+        mat4.identity(matrix3d);
+		mat4.rotateX(matrix3d, -Math.PI/3);
     	//loadLaptop();
 
 //    	drawWalls(renderTexture1);
@@ -1020,9 +1024,12 @@ var transform = [1, 0, 0, 1, 0, 0];
     		gl.colorMask(true, true, true, true);
     		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	}
-    	sim.set3dViewAngle = function (a, h) {
-    		viewAngle = a;
-    		viewHeight = h;
+    	sim.set3dViewAngle = function (x, y) {
+    	    var mtemp = mat4.create();
+    	    mat4.identity(mtemp);
+    		mat4.rotateY(mtemp, x/100);
+    		mat4.rotateX(mtemp, y/100);
+    		mat4.multiply(mtemp, matrix3d, matrix3d);
     	}
 	sim.setColors = function () {
 		colors = [];

@@ -217,7 +217,7 @@ med *= 1.5;
 
 			// calculate lighting
 			float normdot = (qx+qy+0.1)*(1./1.73)/length(vec3(qx, qy, 0.1));
-	        r = 20.*clamp(r, -1., 1.);
+	        r = 40.*clamp(r, -1., 1.);
                 if (r > 0.0)
                         col = mix(mix(colors[TS_COL_MED], colors[TS_COL_NEUTRAL], med),
                       mix(colors[TS_COL_POS_MED], colors[TS_COL_POS], med), r);

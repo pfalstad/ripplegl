@@ -284,8 +284,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.acoustic = ac;
 	}-*/;
 
-	static native void set3dViewAngle(double viewAngle, double viewHeight) /*-{
-		this.set3dViewAngle(viewAngle, viewHeight);
+	static native void set3dViewAngle(double angle1, double angle2) /*-{
+		this.set3dViewAngle(angle1, angle2);
 	}-*/;
 
 
@@ -1769,7 +1769,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		viewAngleCos = Math.cos(viewAngle);
 		viewAngleSin = Math.sin(viewAngle);
 		viewHeight = (dragStartY - y) / 10. + viewHeightDragStart;
-		set3dViewAngle(viewAngle, viewHeight);
+		set3dViewAngle(x-dragX, y-dragY);
+		dragX = x;
+		dragY = y;
 
 		/*
 		 * viewZoom = (y-dragStartY)/40. + viewZoomDragStart; if (viewZoom < .1)
