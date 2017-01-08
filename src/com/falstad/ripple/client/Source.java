@@ -118,7 +118,7 @@ public class Source extends DragObject {
     		if (waveform == WF_PACKET && n == 3)
     			return frequencyEditInfo = new EditInfo("Frequency (Hz)", frequency, 4, 500);
     	}
-    	if (n == 3)
+    	if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 4))
     		return wavelengthEditInfo = new EditInfo("Wavelength:", getWavelength(), 4, 500);
     	return null;
     }
@@ -129,16 +129,16 @@ public class Source extends DragObject {
     		if (waveform != ow)
     			ei.newDialog = true;
     	}
+		if ((waveform == WF_SINE && n == 1) || (waveform == WF_PACKET && n == 3)) {
+			// adjust time zero to maintain continuity in the waveform
+			// even though the frequency has changed.
+			double oldfreq = frequency;
+			frequency = ei.value;
+			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
+			wavelengthEditInfo.value = getWavelength();
+			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
+		}
     	if (waveform == WF_SINE) {
-    		if (n == 1) {
-    			// adjust time zero to maintain continuity in the waveform
-    			// even though the frequency has changed.
-    			double oldfreq = frequency;
-    			frequency = ei.value;
-    			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
-    			wavelengthEditInfo.value = getWavelength();
-    			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
-    		}
     		if (n == 2)
     			phaseShift = ei.value*Math.PI/180;
     	} else {
@@ -147,7 +147,7 @@ public class Source extends DragObject {
     		if (n == 2)
     			delay = ei.value;
     	}
-    	if (n == 3) {
+    	if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 4)) {
     		frequency = 92/3*.5/ei.value;
     		frequencyEditInfo.value = frequency;
 			EditDialog.theEditDialog.updateValue(frequencyEditInfo);

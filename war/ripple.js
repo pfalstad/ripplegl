@@ -107,6 +107,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     var mvMatrixStack = [];
     var pMatrix = mat4.create();
     var matrix3d = mat4.create();
+    var zoom3d = 1;
     
     function mvPushMatrix() {
         var copy = mat4.create();
@@ -891,6 +892,7 @@ var transform = [1, 0, 0, 1, 0, 0];
         mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
         mat4.translate(mvMatrix, [0, 0, -3.2]);
         mat4.multiply(mvMatrix, matrix3d, mvMatrix);
+        mat4.scale(mvMatrix, [zoom3d, zoom3d, zoom3d]);
 //        mat4.rotate(mvMatrix, degToRad(laptopAngle), [0, 1, 0]);
 //        mat4.rotate(mvMatrix, degToRad(-60), [1, 0, 0]);
 //        mat4.rotateZ(mvMatrix, viewAngle);
@@ -1030,6 +1032,9 @@ var transform = [1, 0, 0, 1, 0, 0];
     		mat4.rotateY(mtemp, x/100);
     		mat4.rotateX(mtemp, y/100);
     		mat4.multiply(mtemp, matrix3d, matrix3d);
+    	}
+    	sim.set3dViewZoom = function (z) {
+    		zoom3d = z;
     	}
 	sim.setColors = function () {
 		colors = [];

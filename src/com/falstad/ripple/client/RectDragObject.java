@@ -136,4 +136,7 @@ public abstract class RectDragObject extends DragObject {
 		return " " + topLeft.x + " " + topLeft.y + " " + bottomRight.x + " " + bottomRight.y;
 	}
 
+	String selectText() {
+		return "" + width() + " x " + height();
+	}
 }

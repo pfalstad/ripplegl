@@ -11,7 +11,7 @@ import com.google.gwt.canvas.dom.client.CanvasPixelArray;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.core.client.Duration;
-import com.google.gwt.core.shared.GWT;
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ChangeEvent;
@@ -34,11 +34,17 @@ import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
+import com.google.gwt.http.client.Request;
+import com.google.gwt.http.client.RequestBuilder;
+import com.google.gwt.http.client.RequestCallback;
+import com.google.gwt.http.client.RequestException;
+import com.google.gwt.http.client.Response;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
 import com.google.gwt.user.client.Random;
 import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.DialogBox;
@@ -96,6 +102,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Choice setupChooser;
 	Choice colorChooser;
 	Vector<Setup> setupList;
+	Vector<Setup> oldSetupList;
 	Vector<DragObject> dragObjects;
 	DragObject selectedObject;
 	DragHandle draggingHandle;
@@ -111,6 +118,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	double freqTimeZero;
 	double movingSourcePos = 0;
 	double brightMult = 1;
+	double zoom3d = 1.2;
 	static final double pi = 3.14159265358979323846;
 	float func[];
 	float funci[];
@@ -189,10 +197,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //	Frame iFrame;
 	DockLayoutPanel layoutPanel;
 	VerticalPanel verticalPanel;
+	AbsolutePanel absolutePanel;
 	Rectangle ripArea;
 	Canvas cv;
 	Context2d cvcontext;
 	Canvas backcv;
+	Label coordsLabel;
 	Context2d backcontext;
 	HandlerRegistration handler;
 	DialogBox dialogBox;
@@ -223,7 +233,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		int width, height;
 		int fullwidth = width = (int) RootLayoutPanel.get().getOffsetWidth();
 		height = (int) RootLayoutPanel.get().getOffsetHeight();
-		height = height - MENUBARHEIGHT;
+//		height = height - MENUBARHEIGHT;   // put this back in if we add a menu bar
 		width = width - MAXVERTICALPANELWIDTH;
 		width = height = (width < height) ? width : height;
 		winSize = new Dimension(width, height);
@@ -244,6 +254,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			cv.setCoordinateSpaceWidth(width);
 			cv.setCoordinateSpaceHeight(height);
 		}
+		if (coordsLabel != null)
+			absolutePanel.setWidgetPosition(coordsLabel, 0, height-coordsLabel.getOffsetHeight());
 		/*
 		if (backcv != null) {
 			backcv.setWidth(width + "PX");
@@ -288,6 +300,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.set3dViewAngle(angle1, angle2);
 	}-*/;
 
+	static native void set3dViewZoom(double zoom) /*-{
+		this.set3dViewZoom(zoom);
+	}-*/;
 
 	static native void setResolutionGL(int x, int y, int wx, int wy) /*-{
 		this.setResolution(x, y, wx, wy);
@@ -400,19 +415,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel = new VerticalPanel();
 		
 		setupList = new Vector<Setup>();
+		oldSetupList = new Vector<Setup>();
 		Setup s = new SingleSourceSetup();
 		while (s != null) {
-		    setupList.addElement(s);
+		    oldSetupList.addElement(s);
 		    s = s.createNext();
 		}
 
 		setupChooser = new Choice();
-		int i;
-		for (i = 0; i != setupList.size(); i++)
-		    setupChooser.add("Setup: " +
-				     ((Setup) setupList.elementAt(i)).getName());
 		setupChooser.addChangeHandler(this);
 //		setupChooser.addItemListener(this);
+		getSetupList(false);
 		
 		sourceChooser = new Choice();
 		sourceChooser.add("No Sources");
@@ -452,8 +465,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		
 		verticalPanel.add(setupChooser);
-		verticalPanel.add(sourceChooser);
-		verticalPanel.add(modeChooser);
+//		verticalPanel.add(sourceChooser);
+//		verticalPanel.add(modeChooser);
 		verticalPanel.add(colorChooser);
 		verticalPanel.add(blankButton = new Button("Clear Waves"));
 		blankButton.addClickHandler(this);
@@ -497,8 +510,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		brightnessBar.setWidth(verticalPanelWidth);
 		auxBar.setWidth(verticalPanelWidth);
 
+		absolutePanel = new AbsolutePanel();
+		coordsLabel = new Label("(0,0)");
+		coordsLabel.setStyleName("coordsLabel");
+		absolutePanel.add(cv);
+		absolutePanel.add(coordsLabel, 0, 0);
+		
 		layoutPanel.addEast(verticalPanel, verticalPanelWidth);
-		layoutPanel.add(cv);
+		layoutPanel.add(absolutePanel);
 		RootLayoutPanel.get().add(layoutPanel);
 
 		mainMenuBar = new MenuBar(true);
@@ -529,16 +548,20 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		    addDefaultColorScheme();
 		doColor();
 		setDamping();
-		setup = (Setup) setupList.elementAt(setupChooser.getSelectedIndex());
+//		setup = (Setup) setupList.elementAt(setupChooser.getSelectedIndex());
 		
 		cv.addMouseMoveHandler(this);
 		cv.addMouseDownHandler(this);
 		cv.addMouseOutHandler(this);
 		cv.addMouseUpHandler(this);
         cv.addMouseWheelHandler(this);
+        cv.addClickHandler(this);
+        doTouchHandlers(cv.getCanvasElement());
 		cv.addDomHandler(this,  ContextMenuEvent.getType());
 		
 		reinit();
+		set3dViewZoom(zoom3d);
+		setCanvasSize();
 		
 		// String os = Navigator.getPlatform();
 		// isMac = (os.toLowerCase().contains("mac"));
@@ -546,6 +569,64 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		timer.scheduleRepeating(FASTTIMER);
 
 	}
+
+    // install touch handlers to handle touch events properly on mobile devices.
+    // don't feel like rewriting this in java.  Anyway, java doesn't let us create mouse
+    // events and dispatch them.
+    native void doTouchHandlers(CanvasElement cv) /*-{
+	// Set up touch events for mobile, etc
+	var lastTap;
+	var tmout;
+	var sim = this;
+	cv.addEventListener("touchstart", function (e) {
+        	mousePos = getTouchPos(cv, e);
+  		var touch = e.touches[0];
+  		var etype = "mousedown";
+  		clearTimeout(tmout);
+  		if (e.timeStamp-lastTap < 300) {
+     		    etype = "dblclick";
+  		} else {
+  		    tmout = setTimeout(function() {
+  		        sim.@com.falstad.ripple.client.RippleSim::longPress()();
+  		    }, 1000);
+  		}
+  		lastTap = e.timeStamp;
+  		
+  		var mouseEvent = new MouseEvent(etype, {
+    			clientX: touch.clientX,
+    			clientY: touch.clientY
+  		});
+  		e.preventDefault();
+  		cv.dispatchEvent(mouseEvent);
+	}, false);
+	cv.addEventListener("touchend", function (e) {
+  		var mouseEvent = new MouseEvent("mouseup", {});
+  		e.preventDefault();
+  		clearTimeout(tmout);
+  		cv.dispatchEvent(mouseEvent);
+	}, false);
+	cv.addEventListener("touchmove", function (e) {
+  		var touch = e.touches[0];
+  		var mouseEvent = new MouseEvent("mousemove", {
+    			clientX: touch.clientX,
+    			clientY: touch.clientY
+  		});
+  		e.preventDefault();
+  		clearTimeout(tmout);
+  		cv.dispatchEvent(mouseEvent);
+	}, false);
+
+	// Get the position of a touch relative to the canvas
+	function getTouchPos(canvasDom, touchEvent) {
+  		var rect = canvasDom.getBoundingClientRect();
+  		return {
+    			x: touchEvent.touches[0].clientX - rect.left,
+    			y: touchEvent.touches[0].clientY - rect.top
+  		};
+	}
+	
+    }-*/;
+    
 
     public void composeMainMenu(MenuBar mainMenuBar) {
     	mainMenuBar.addItem(getClassCheckItem("Add Wall", "Wall"));
@@ -567,6 +648,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse Medium", "MediumEllipse"));
     	mainMenuBar.addItem(getClassCheckItem("Add Parabola", "Parabola"));
     	mainMenuBar.addItem(getClassCheckItem("Add Lens", "Lens"));
+    	mainMenuBar.addItem(getClassCheckItem("Options...", "Options"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
@@ -634,6 +716,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject.setInitialPosition();
     		dragObjects.add(newObject);
     		setSelectedObject(newObject);
+    	}
+    	if (item == "Options") {
+    		doEdit(new EditOptions(this));
     	}
     }
 
@@ -824,11 +909,22 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void setResolution() {
+		int newWidth = resBar.getValue();
+		setResolution(newWidth, 0);
+	}
+
+	void setResolution(int newWidth, int border) {
 		int oldWidth = windowWidth;
-		windowWidth = windowHeight = resBar.getValue();
-		int border = windowWidth / 9;
-		if (border < 20)
-			border = 20;
+		if (newWidth == oldWidth && border == 0)
+			return;
+		if (border == 0) {
+			border = newWidth / 8;
+			if (border < 20)
+				border = 20;
+		}
+		if (resBar.getValue() != newWidth)
+			resBar.setValue(newWidth);
+		windowWidth = windowHeight = newWidth;
 		windowOffsetX = windowOffsetY = border;
 		System.out.println(windowWidth + "," + windowHeight);
 		gridSizeX = windowWidth + windowOffsetX * 2;
@@ -846,9 +942,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void setResolution(int x) {
-		resBar.setValue(x);
-		setResolution();
-		// reinit();
+		setResolution(x, 0);
 	}
 
 	void view3dDrag(MouseEvent e) {
@@ -866,6 +960,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 	
 	void doSetup() {
+		if (setupList.size() == 0)
+			return;
 		t = 0;
 		if (resBar.getValue() < 32)
 			setResolution(32);
@@ -1093,6 +1189,110 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 	};
 
+
+    void getSetupList(final boolean openDefault) {
+
+    	String url;
+    	url = GWT.getModuleBaseURL()+"setuplist.txt"+"?v="+random.nextInt(); 
+		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, url);
+		try {
+			requestBuilder.sendRequest(null, new RequestCallback() {
+				public void onError(Request request, Throwable exception) {
+					GWT.log("File Error Response", exception);
+				}
+
+				public void onResponseReceived(Request request, Response response) {
+					// processing goes here
+					if (response.getStatusCode()==Response.SC_OK) {
+					String text = response.getText();
+					processSetupList(text.getBytes(), text.length(), openDefault);
+					// end or processing
+					}
+					else 
+						GWT.log("Bad file server response:"+response.getStatusText() );
+				}
+			});
+		} catch (RequestException e) {
+			GWT.log("failed file reading", e);
+		}
+    }
+		
+    void processSetupList(byte b[], int len, final boolean openDefault) {
+    	int p;
+    	for (p = 0; p < len; ) {
+    		int l;
+    		for (l = 0; l != len-p; l++)
+    			if (b[l+p] == '\n') {
+    				l++;
+    				break;
+    			}
+    		String line = new String(b, p, l-1);
+    		if (line.charAt(0) == '#')
+    			;
+/*    		else if (line.charAt(0) == '+') {
+    		//	MenuBar n = new Menu(line.substring(1));
+    			MenuBar n = new MenuBar(true);
+    			n.setAutoOpen(true);
+    			currentMenuBar.addItem(line.substring(1),n);
+    			currentMenuBar = stack[stackptr++] = n;
+    		} else if (line.charAt(0) == '-') {
+    			currentMenuBar = stack[--stackptr-1];
+    		} */
+    		else {
+    			int i = line.indexOf(' ');
+    			if (i > 0) {
+    				String title = line.substring(i+1);
+    				boolean first = false;
+    				if (line.charAt(0) == '>')
+    					first = true;
+    				String file = line.substring(first ? 1 : 0, i);
+    				Setup s = null;
+    				try {
+    					int num = Integer.parseInt(file);
+    					s = oldSetupList.get(num);
+    					title += " (old)";
+    				} catch (NumberFormatException e) {
+        				s = new FileSetup(title, file);
+    				}
+    				setupList.add(s);
+    				setupChooser.add("Example: " + title);
+    			}
+    		}
+    		p += l;
+    	}
+}
+
+
+	void readSetupFile(String str, String title) {
+		t = 0;
+		console("reading example " + str);
+			String url=GWT.getModuleBaseURL()+"examples/"+str+"?v="+random.nextInt(); 
+			loadFileFromURL(url);
+	}
+
+	void loadFileFromURL(String url) {
+		RequestBuilder requestBuilder = new RequestBuilder(RequestBuilder.GET, url);
+		try {
+			requestBuilder.sendRequest(null, new RequestCallback() {
+				public void onError(Request request, Throwable exception) {
+					GWT.log("File Error Response", exception);
+				}
+
+				public void onResponseReceived(Request request, Response response) {
+					if (response.getStatusCode()==Response.SC_OK) {
+					String text = response.getText();
+					readImport(text);
+					}
+					else 
+						GWT.log("Bad file server response:"+response.getStatusText() );
+				}
+			});
+		} catch (RequestException e) {
+			GWT.log("failed file reading", e);
+		}
+		
+	}
+
 	void doImport() {
 		if (impDialog != null) {
 //			requestFocus();
@@ -1103,12 +1303,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		String dump = "";
 
 		int i;
-		dump = "$ 0 " + resBar.getValue() + " "
-				+ sourceChooser.getSelectedIndex() + " "
-				+ colorChooser.getSelectedIndex() + " "
-				+ fixedEndsCheck.getState() + " " + view3dCheck.getState()
-				+ " " + speedBar.getValue() + " " + freqBar.getValue() + " "
-				+ brightnessBar.getValue() + " " + auxBar.getValue() + "\n";
+		dump = "$ 1 " + windowWidth + " " + windowOffsetX + " " + dampingBar.getValue() + " " +
+				fixedEndsCheck.getState() + " " + brightnessBar.getValue() + "\n";
 /*		for (i = 0; i != sourceCount; i++) {
 			OscSource src = sources[i];
 			dump += "s " + src.x + " " + src.y + "\n";
@@ -1154,29 +1350,22 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				try {
 					if (tint == '$') {
 						int flags = new Integer(st.nextToken()).intValue();
+						if ((flags & 1) == 0)
+							return;
 
-						resBar.setValue(new Integer(st.nextToken()).intValue());
-						setResolution();
-						 reinit(false);
+//						dump = "$ 1 " + windowWidth + " " + windowOffsetX + " " +
+//								fixedEndsCheck.getState() + " " + brightnessBar.getValue() + "\n";
 
-						sourceChooser.select(new Integer(st.nextToken())
-								.intValue());
-						setSources();
+						int ww = Integer.parseInt(st.nextToken());
+						int wo = Integer.parseInt(st.nextToken());
+						setResolution(ww, wo);
+						reinit(false);
 
-						colorChooser.select(new Integer(st.nextToken())
-								.intValue());
-						doColor();
-
+						dampingBar.setValue(Integer.parseInt(st.nextToken()));
 						fixedEndsCheck.setState(st.nextToken()
 								.compareTo("true") == 0);
-						view3dCheck
-								.setState(st.nextToken().compareTo("true") == 0);
-						speedBar.setValue(new Integer(st.nextToken())
-								.intValue());
-						freqBar.setValue(new Integer(st.nextToken()).intValue());
 						brightnessBar.setValue(new Integer(st.nextToken())
 								.intValue());
-						auxBar.setValue(new Integer(st.nextToken()).intValue());
 						break;
 					}
                     if (tint >= '0' && tint <= '9')
@@ -1262,7 +1451,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	abstract class Setup {
 		abstract String getName();
 
-		abstract void select();
+		void select() {}
 
 		void doSetupSources() {
 			setSources();
@@ -1275,7 +1464,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			return 1;
 		}
 
-		abstract Setup createNext();
+		Setup createNext() { return null; }
 
 		void eachFrame() {
 		}
@@ -1285,6 +1474,21 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 	};
 
+	class FileSetup extends Setup {
+		String title, file;
+		
+		FileSetup(String t, String f) {
+			title = t;
+			file = f;
+		}
+		
+		void select() {
+			readSetupFile(file, title);
+		}
+		
+		String getName() { return title; }
+	}
+	
 	class SingleSourceSetup extends Setup {
 		
 		String getName() {
@@ -1930,7 +2134,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_NONE);
 			int i, j;
 			int y = 1;
-			int ny = 5;
+			int ny = 25;
 			while (y + ny < windowHeight) {
 				int nx = ((y + ny) * (windowWidth - 8) / windowHeight) + 6;
 				int y1 = y + windowOffsetY;
@@ -1963,7 +2167,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_NONE);
 			int i, j;
 			int y = 1;
-			int ny = 5;
+			int ny = 25;
 			int nx = windowWidth - 2;
 			int mode = 1;
 			while (y + ny < windowHeight) {
@@ -2142,7 +2346,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_NONE);
 			int i, j;
 			int y = 1;
-			int ny = 5;
+			int ny = 25;
 			while (y + ny < windowHeight) {
 				int nx = ((y + ny) * (windowWidth - 8) / windowHeight) + 6;
 				int y1 = y + windowOffsetY;
@@ -2176,7 +2380,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_NONE);
 			int i, j;
 			int y = 1;
-			int ny = 5;
+			int ny = 25;
 			int nx = windowWidth - 2;
 			int mode = 1;
 			while (y + ny < windowHeight) {
@@ -3529,6 +3733,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	@Override
 	public void onMouseUp(MouseUpEvent event) {
+		event.preventDefault();
 //		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
 //		    return;
 		dragging = false;
@@ -3537,6 +3742,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
+		event.preventDefault();
 		doMouseMove(event);
 	}
 	
@@ -3547,8 +3753,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 	
 	void doMouseMove(MouseEvent<?> event) {
+		Point pt = getPointFromEvent(event);
+		String txt = (selectedObject != null) ? selectedObject.selectText() : null;
+		if (txt != null)
+			coordsLabel.setText("(" + pt.x + "," + pt.y + ") " + txt);
+		else
+			coordsLabel.setText("(" + pt.x + "," + pt.y + ")");
+		absolutePanel.setWidgetPosition(coordsLabel,
+				(pt.x < windowWidth/4 && pt.y > windowHeight*3/4) ? cv.getOffsetWidth()-coordsLabel.getOffsetWidth() : 0,
+				cv.getOffsetHeight()-coordsLabel.getOffsetHeight());
+		coordsLabel.setVisible(true);
 		if (rotationMode) {
-			Point pt = getPointFromEvent(event);
 			selectedObject.rotateTo(pt.x, pt.y);
 			return;
 		}
@@ -3618,6 +3833,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	
 	@Override
 	public void onMouseDown(MouseDownEvent event) {
+		event.preventDefault();
 		adjustResolution = false;
 		doMouseMove(event);
 		if (rotationMode) {
@@ -3691,12 +3907,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         if (selectedObject != null && selectedObject.canRotate()) {
         	selectedObject.rotate(event.getDeltaY()* .01);
         }
+        if (view3dCheck.getState()) {
+        	zoom3d *= Math.exp(-event.getDeltaY() * .01);
+        	set3dViewZoom(zoom3d);
+        }
 	}
 
 	@Override
 	public void onMouseOut(MouseOutEvent event) {
 		dragging = false;
 		dragSet = dragClear = false;
+		coordsLabel.setVisible(false);
 	}
 
 	@Override
@@ -3715,6 +3936,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         menuY = e.getNativeEvent().getClientY();
         doPopupMenu();
 	}
+
+    void longPress() {
+    	doPopupMenu();
+    }
 
     void doPopupMenu() {
     	if (selectedObject != null) {
@@ -3738,8 +3963,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	@Override
 	public void onDoubleClick(DoubleClickEvent event) {
-		// TODO Auto-generated method stub
-
+		event.preventDefault();
 	}
 
 	void doCreateWall() {
@@ -3791,6 +4015,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	
 	@Override
 	public void onClick(ClickEvent event) {
+		event.preventDefault();
 		if (event.getSource() == blankButton) {
 			doBlank();
 		} else if (event.getSource() == blankWallsButton) {

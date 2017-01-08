@@ -28,6 +28,9 @@ public class MediumBox extends RectDragObject {
 				speedIndex, speedIndex);
 	}
 	
+	// let people poke inside
+	boolean hitTestInside(double x, double y) { return false; }
+
     public EditInfo getEditInfo(int n) {
         if (n == 0)
             return new EditInfo("Speed Index", speedIndex, 0, 1).

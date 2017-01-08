@@ -92,4 +92,8 @@ public class ModeBox extends RectDragObject {
 	String dump() { return super.dump() + " " + xmode + " " + ymode + " " + randomize + " " + box; }
 	
 	int getDumpType() { return 'M'; }
+	
+	boolean hitTestInside(double x, double y) {
+		return false;
+	}
 }

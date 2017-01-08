@@ -205,13 +205,13 @@ public class Scrollbar extends  Composite implements
 //		e.preventDefault();
 //		if (enabled && attachedElm!=null && attachedElm.isMouseElm())
 //			CircuitElm.sim.setMouseElm(null);
-//		if (enabled && dragging) {
-//			val=calcValueFromPos(e.getX());	
-//			dragging=false;
-//			draw();
-//			if (command!=null)
-//				command.execute();
-//		}
+		if (enabled && dragging) {
+			val=calcValueFromPos(e.getX());	
+			dragging=false;
+			draw();
+			if (command!=null)
+				command.execute();
+		}
 
 	}
 	

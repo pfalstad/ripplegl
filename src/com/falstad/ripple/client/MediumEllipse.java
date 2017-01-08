@@ -19,6 +19,7 @@ public class MediumEllipse extends MediumBox {
 		return ht;
 	}
 	
+	/*
 	@Override boolean hitTestInside(double x, double y) {
 		x -= (topLeft.x+topRight.x)/2;
 		y -= (topLeft.y+bottomLeft.y)/2;
@@ -27,6 +28,7 @@ public class MediumEllipse extends MediumBox {
 		double ht = Math.sqrt(x*x/(a*a)+y*y/(b*b));
 		return ht <= 1;
 	}
+	*/
 	
 	@Override void drawSelection() {
 		RippleSim.drawEllipse(

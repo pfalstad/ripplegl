@@ -17,6 +17,9 @@ public class Parabola extends RectDragObject {
 		prepare();
 	}
 	
+	// let people poke inside
+	boolean hitTestInside(double x, double y) { return false; }
+
 	int getDumpType() { return 'p'; }
 
 }

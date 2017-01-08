@@ -17,6 +17,9 @@ public class TrianglePrism extends MediumBox {
 		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
 	}
 	
+	// let people poke inside
+	boolean hitTestInside(double x, double y) { return false; }
+
 	int getDumpType() { return 't'; }
 
 }

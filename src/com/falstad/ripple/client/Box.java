@@ -12,6 +12,7 @@ public class Box extends RectDragObject {
 		RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
 	}
 
+	// let people poke inside box
 	boolean hitTestInside(double x, double y) { return false; }
 	
 	int getDumpType() { return 'b'; }
