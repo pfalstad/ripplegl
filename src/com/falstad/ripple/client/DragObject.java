@@ -244,7 +244,7 @@ public abstract class DragObject implements Editable {
 			return null;
 		DragHandle dh1 = handles.get(0);
 		DragHandle dh2 = handles.get(1);
-		int len = (int) Math.round(Math.hypot(dh1.x-dh2.x, dh1.y-dh2.y));
-		return "length = " + len;
+		double len = Math.round(Math.hypot(dh1.x-dh2.x, dh1.y-dh2.y));
+		return "length = " + sim.getLengthText(len);
 	}
 }

@@ -138,6 +138,7 @@ var transform = [1, 0, 0, 1, 0, 0];
 
 
     var renderTexture1, renderTexture2;
+    var fbType;
 
     function initTextureFramebuffer() {
     	var rttFramebuffer = gl.createFramebuffer();
@@ -156,7 +157,14 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     	//gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     	gl.HALF_FLOAT_OES = 0x8D61;
-    	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGB, gl.HALF_FLOAT_OES, null);
+    	
+    	if (fbType == 0) {
+    		// this works on android
+    		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGBA, gl.FLOAT, null);
+    	} else {
+    		// for ios
+    		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGB, gl.HALF_FLOAT_OES, null);
+    	}
 
     	var renderbuffer = gl.createRenderbuffer();
     	gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
@@ -164,6 +172,11 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rttTexture, 0);
 //    	gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+        var status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if (status !== gl.FRAMEBUFFER_COMPLETE) {
+          return null;
+        }
 
     	gl.bindTexture(gl.TEXTURE_2D, null);
     	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
@@ -955,7 +968,18 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     	gridSizeX = gridSizeY = 1024;
     	windowOffsetX = windowOffsetY = 40;
+    	fbType = 0;
     	renderTexture2 = initTextureFramebuffer();
+    	if (!renderTexture2) {
+    		// float didn't work, try half float
+    		fbType = 1;
+        	renderTexture2 = initTextureFramebuffer();
+        	if (!renderTexture2) {
+        		alert("Couldn't create frame buffer, try javascript version");
+        		return;
+        	}
+    	}
+    	console.log("using fbType " + fbType);
     	renderTexture1 = initTextureFramebuffer();
     	initShaders();
     	initBuffers();

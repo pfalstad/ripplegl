@@ -52,10 +52,10 @@ public class MovingSource extends Source {
 
 	public EditInfo getEditInfo(int n) {
 		if (n == 0)
-			return new EditInfo("Move Duration", moveDuration, 0, 1).
+			return new EditInfo("Move Duration (iters)", moveDuration, 0, 1).
             setDimensionless();
 		if (n == 1)
-			return new EditInfo("Pause Duration", pauseDuration, 0, 1).
+			return new EditInfo("Pause Duration (iters)", pauseDuration, 0, 1).
 					setDimensionless();
 		return super.getEditInfo(n-2);
 	}

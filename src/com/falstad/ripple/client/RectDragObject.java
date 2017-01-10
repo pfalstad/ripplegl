@@ -38,7 +38,6 @@ public abstract class RectDragObject extends DragObject {
 		Point origin = rotatedOrigin();
 		x -= origin.x;
 		y -= origin.y;
-//		sim.console("hti " + x + " " + y + " " + width() + " "+ height());
 		return x >= 0 && x <= width() && y >= 0 && y <= height(); 
 	}
 	
@@ -137,6 +136,6 @@ public abstract class RectDragObject extends DragObject {
 	}
 
 	String selectText() {
-		return "" + width() + " x " + height();
+		return "" + sim.getLengthText(width()) + " x " + sim.getLengthText(height());
 	}
 }

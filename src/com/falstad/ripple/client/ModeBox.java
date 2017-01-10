@@ -37,7 +37,7 @@ public class ModeBox extends RectDragObject {
 			int m1y = rand() % ymode;
 			int m2x = rand() % xmode;
 			int m2y = rand() % ymode;
-			if (sim.fixedEndsCheck.getState()) {
+			if (sim.waveChooser.getSelectedIndex() != RippleSim.WAVE_SOUND) {
 				if (m1x == 0) m1x = 1;
 				if (m1y == 0) m1y = 1;
 				if (m2x == 0) m2x = 1;
@@ -91,6 +91,10 @@ public class ModeBox extends RectDragObject {
     }
 	String dump() { return super.dump() + " " + xmode + " " + ymode + " " + randomize + " " + box; }
 	
+	String selectText() { return super.selectText() + ", f = " +
+			RippleSim.getUnitText(sim.waveSpeed/2 * Math.hypot(xmode/(sim.lengthScale*(width()-1)),
+						ymode/(sim.lengthScale*(height()-1))), "Hz");
+	}
 	int getDumpType() { return 'M'; }
 	
 	boolean hitTestInside(double x, double y) {

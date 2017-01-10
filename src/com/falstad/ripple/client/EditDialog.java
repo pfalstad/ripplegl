@@ -178,7 +178,9 @@ class EditDialog extends DialogBox  {
 			return noCommaFormat.format(v*1e-3) + "k";
 		if (va < 1e9)
 			return noCommaFormat.format(v*1e-6) + "M";
-		return noCommaFormat.format(v*1e-9) + "G";
+		if (va < 1e12)
+			return noCommaFormat.format(v*1e-9) + "G";
+		return noCommaFormat.format(v*1e-12) + "T";
 	}
 
 	double parseUnits(EditInfo ei) throws java.text.ParseException {
@@ -200,6 +202,7 @@ class EditDialog extends DialogBox  {
 		case 'k': case 'K': mult = 1e3; break;
 		case 'M': mult = 1e6; break;
 		case 'G': case 'g': mult = 1e9; break;
+		case 't': case 'T': mult = 1e12; break;
 		}
 		if (mult != 1)
 			s = s.substring(0, len-1).trim();

@@ -186,10 +186,10 @@ med *= 1.5;
 #define TS_COL_NEUTRAL 8
 #define TS_COL_COUNT 9
 
-    attribute vec2 aTextureCoord;
+    attribute highp vec2 aTextureCoord;
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
-	uniform float xOffset;
+	uniform highp float xOffset;
 
     varying vec2 vTextureCoord;
     varying vec4 vPosition;
@@ -199,7 +199,7 @@ med *= 1.5;
     uniform lowp vec3 colors[TS_COL_COUNT];
 
     void main(void) {
-		vec2 tc  = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
+		highp vec2 tc  = vec2(aTextureCoord.x+xOffset, aTextureCoord.y);
         vec4 pv = texture2D(uSampler, tc);
 		float r =  pv.r*brightness;
         vPosition = uMVMatrix * vec4(-1.0+2.0*tc.x, -1.0+2.0*tc.y, r, 1.0);

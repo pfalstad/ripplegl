@@ -106,7 +106,7 @@ public class Source extends DragObject {
     	}
     	if (waveform == WF_SINE) {
     		if (n == 1)
-    			return frequencyEditInfo = new EditInfo("Frequency (Hz)", frequency, 4, 500);
+    			return frequencyEditInfo = new EditInfo("Frequency (Hz)", getRealFrequency(), 4, 500);
     		if (n == 2)
     			return new EditInfo("Phase Offset (degrees)", phaseShift*180/Math.PI,
     					-180, 180).setDimensionless();
@@ -116,12 +116,15 @@ public class Source extends DragObject {
     		if (n == 2)
     			return new EditInfo("Delay", delay, 0, 0);
     		if (waveform == WF_PACKET && n == 3)
-    			return frequencyEditInfo = new EditInfo("Frequency (Hz)", frequency, 4, 500);
+    			return frequencyEditInfo = new EditInfo("Frequency (Hz)", getRealFrequency(), 4, 500);
     	}
     	if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 4))
-    		return wavelengthEditInfo = new EditInfo("Wavelength:", getWavelength(), 4, 500);
+    		return wavelengthEditInfo = new EditInfo("Wavelength (m)", getWavelength(), 4, 500);
     	return null;
     }
+    
+    static final double freqScale = 92/3 * .5;
+    
     public void setEditValue(int n, EditInfo ei) {
     	if (n == 0) {
     		int ow = waveform;
@@ -133,7 +136,9 @@ public class Source extends DragObject {
 			// adjust time zero to maintain continuity in the waveform
 			// even though the frequency has changed.
 			double oldfreq = frequency;
-			frequency = ei.value;
+			double wavelength = sim.waveSpeed/ei.value;
+    		frequency = freqScale * sim.lengthScale /wavelength;
+    		enforceMaxFrequency();
 			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
 			wavelengthEditInfo.value = getWavelength();
 			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
@@ -148,16 +153,34 @@ public class Source extends DragObject {
     			delay = ei.value;
     	}
     	if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 4)) {
-    		frequency = 92/3*.5/ei.value;
-    		frequencyEditInfo.value = frequency;
+    		// set wavelength
+    		frequency = freqScale * sim.lengthScale /ei.value;
+    		enforceMaxFrequency();
+    		frequencyEditInfo.value = getRealFrequency();
 			EditDialog.theEditDialog.updateValue(frequencyEditInfo);
     	}
+    	RippleSim.console("wavelength = " + (freqScale/frequency));
     }
+
+    void enforceMaxFrequency() {
+    	// enforce minimum wavelength of 6 pixels
+    	double maxfreq = freqScale/6;
+    	if (frequency <= maxfreq)
+    		return;
+    	frequency = maxfreq;
+		frequencyEditInfo.value = getRealFrequency();
+		EditDialog.theEditDialog.updateValue(frequencyEditInfo);
+		wavelengthEditInfo.value = getWavelength();
+		EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
+}
     
     double getWavelength() {
-    	return 92/3*.5/frequency;
+    	return (freqScale/frequency) * sim.lengthScale;
+    }
+    
+    double getRealFrequency() {
+    	return sim.waveSpeed/getWavelength();
     }
     
 	int getDumpType() { return 's'; }
-
 }

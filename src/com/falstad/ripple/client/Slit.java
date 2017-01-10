@@ -48,20 +48,18 @@ public class Slit extends Wall {
             return new EditInfo("Slit Count", slitCount, 0, 1).
                 setDimensionless();
         if (n == 1)
-            return new EditInfo("Slit Width", slitWidth, 0, 1).
-                setDimensionless();
+            return new EditInfo("Slit Width (m)", slitWidth*sim.lengthScale, 0, 1);
         if (n == 2)
-            return new EditInfo("Slit Separation", slitSeparation, 0, 1).
-                setDimensionless();
+            return new EditInfo("Slit Separation (m)", slitSeparation*sim.lengthScale, 0, 1);
         return null;
     }
     public void setEditValue(int n, EditInfo ei) {
         if (n == 0)
         	slitCount = (int)ei.value;
         if (n == 1)
-        	slitWidth = (int)ei.value;
+        	slitWidth = (int)(ei.value/sim.lengthScale);
         if (n == 2)
-        	slitSeparation = (int)ei.value;
+        	slitSeparation = (int)(ei.value/sim.lengthScale);
     }
 
 	int getDumpType() { return 203; }
