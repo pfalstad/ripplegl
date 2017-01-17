@@ -1,0 +1,26 @@
+$ 1 512 64 2 4 569 0.00390625
+M 0 0 0 101 101 0 6 6 true true
+M 0 101 0 202 101 0 6 6 true true
+M 0 202 0 303 101 0 6 6 true true
+M 0 303 0 404 101 0 6 6 true true
+M 0 404 0 505 101 0 6 6 true true
+M 0 0 101 101 202 0 6 6 true true
+M 0 101 101 202 202 0 6 6 true true
+M 0 202 101 303 202 0 6 6 true true
+M 0 303 101 404 202 0 6 6 true true
+M 0 404 101 505 202 0 6 6 true true
+M 0 0 202 101 303 0 6 6 true true
+M 0 101 202 202 303 0 6 6 true true
+M 0 202 202 303 303 0 6 6 true true
+M 0 303 202 404 303 0 6 6 true true
+M 0 404 202 505 303 0 6 6 true true
+M 0 0 303 101 404 0 6 6 true true
+M 0 101 303 202 404 0 6 6 true true
+M 0 202 303 303 404 0 6 6 true true
+M 0 303 303 404 404 0 6 6 true true
+M 0 404 303 505 404 0 6 6 true true
+M 0 0 404 101 505 0 6 6 true true
+M 0 101 404 202 505 0 6 6 true true
+M 0 202 404 303 505 0 6 6 true true
+M 0 303 404 404 505 0 6 6 true true
+M 0 404 404 505 505 0 6 6 true true
