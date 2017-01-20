@@ -27,9 +27,10 @@ public abstract class DragObject implements Editable {
 	}
 
 	void prepare() {}
-	void select() { selected = true; }
-	void deselect() { selected = false; }
+	void setSelected(boolean s) { selected = s; }
+	boolean isSelected() { return selected; }
 	void run() {}
+	void delete() {}
 	void setTransform() {
 		if (transform == null) {
 			transform = new double[6];
@@ -108,6 +109,8 @@ public abstract class DragObject implements Editable {
 	void rotateTo(int x, int y) {
 //		sim.console("rotateto " + x + " " + y + " " + centerX + " " + centerY);
 		rotation = Math.atan2(-y+centerY, x-centerX)-Math.PI/2;
+		double step = Math.PI/12;
+		rotation = Math.round(rotation/step)*step;
 		setTransform();
 		sim.changedWalls = true;
 	}

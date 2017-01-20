@@ -18,7 +18,6 @@ public class Ellipse extends RectDragObject {
 		double a = (topRight.x-topLeft.x)/2;
 		double b = (bottomLeft.y-topLeft.y)/2;
 		double ht = Math.abs(Math.sqrt(x*x/(a*a)+y*y/(b*b))-1)*a;
-		sim.console("hit test " + ht);
 		return ht;
 	}
 	
@@ -32,7 +31,6 @@ public class Ellipse extends RectDragObject {
 			fd = 0;
 		else
 			fc = 0;
-		sim.console("ell " + a + " " + b + " " + fc + " " + fd);
 		RippleSim.drawFocus((topLeft.x+topRight.x)/2-fc, (topLeft.y+bottomLeft.y)/2-fd);
 		RippleSim.drawFocus((topLeft.x+topRight.x)/2+fc, (topLeft.y+bottomLeft.y)/2+fd);
 	}

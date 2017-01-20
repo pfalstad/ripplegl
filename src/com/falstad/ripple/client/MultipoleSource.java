@@ -88,9 +88,9 @@ public class MultipoleSource extends Source {
 
     public EditInfo getEditInfo(int n) {
         if (n == 0)
-                return new EditInfo("Source Count", sourceCount, 0, 1).setDimensionless();
+        	return new EditInfo("Source Count", sourceCount, 0, 1).setDimensionless();
         if (n == 1)
-                return new EditInfo("Separation", separation, 0, 1).setDimensionless();
+        	return new EditInfo("Radius (m)", separation*sim.lengthScale, 0, 1);
         return super.getEditInfo(n-2);
     }
     
@@ -103,7 +103,7 @@ public class MultipoleSource extends Source {
     		return;
     	}
     	if (n == 1) {
-    		separation = ei.value;
+    		separation = ei.value/sim.lengthScale;
     		positionHandles();
     		return;
     	}

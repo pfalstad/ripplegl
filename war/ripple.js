@@ -448,16 +448,12 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
+        mat4.identity(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
         gl.lineWidth(sim.drawingSelection < 0 ? 1 : 2);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINE_LOOP, 0, 4);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-
-        //mvPopMatrix();
     }
 
     function drawFocus(x, y) {
@@ -958,7 +954,6 @@ var transform = [1, 0, 0, 1, 0, 0];
 
 
     document.passCanvas = function passCanvas (cv, sim_) {
-    	console.log("pass canvas " + cv);
     	canvas = cv;
     	sim = sim_;
     	gl = cv.getContext("experimental-webgl");
@@ -979,7 +974,6 @@ var transform = [1, 0, 0, 1, 0, 0];
         		return;
         	}
     	}
-    	console.log("using fbType " + fbType);
     	renderTexture1 = initTextureFramebuffer();
     	initShaders();
     	initBuffers();
@@ -1008,7 +1002,6 @@ var transform = [1, 0, 0, 1, 0, 0];
     		renderTexture2 = initTextureFramebuffer();
     		renderTexture1 = initTextureFramebuffer();
     		initBuffers();
-    		console.log("set resolution " + gridSizeX + " " + windowOffsetX + " " + windowWidth + " " + windowHeight);
     	}
     	sim.drawSource = function (x, y, f) { drawSource(x, y, f); }
     	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
@@ -1068,6 +1061,8 @@ var transform = [1, 0, 0, 1, 0, 0];
 		}
 	}
 	sim.drawingSelection = -1;
+    mat4.identity(pMatrix);
+    mat4.identity(mvMatrix);
 
 }
 

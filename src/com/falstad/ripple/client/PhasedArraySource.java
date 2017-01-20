@@ -9,6 +9,12 @@ public class PhasedArraySource extends LineSource {
 		phaseShift2 = new Double(st.nextToken()).doubleValue();
 	}
 	
+	PhasedArraySource(int x1, int y1, int x2, int y2, double ps1, double ps2) {
+		super(x1, y1, x2, y2);
+		phaseShift  = ps1;
+		phaseShift2 = ps2;
+	}
+	
 	String dump() { return super.dump() + " " + phaseShift2; }
 	
 	double phaseShift2;

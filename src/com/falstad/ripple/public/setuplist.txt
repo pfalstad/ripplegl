@@ -16,8 +16,8 @@ oct.txt Octupole
 plane.txt Plane Wave
 interplane.txt Intersecting Planes
 phasearray1.txt Phased Array 1
-17 Phased Array 2
-18 Phased Array 3
+phasearray2.txt Phased Array 2
+phasearray3.txt Phased Array 3
 doppler1.txt Doppler Effect 1
 doppler2.txt Doppler Effect 2
 sonicboom.txt Sonic Boom
@@ -30,7 +30,7 @@ nnmodecombos.txt NxN Mode Combos
 01modes.txt 0x1 Acoustic Modes
 0nmodes.txt 0xN Acoustic Modes
 nnmodesacoustic.txt NxN Acoustic Modes
-31 Coupled Cavities
+coupledcav.txt Coupled Cavities
 beats.txt Beats
 medium.txt Slow Medium
 refraction.txt Refraction
@@ -42,12 +42,12 @@ circle.txt Circle
 ellipse.txt Ellipse
 rescav1.txt Resonant Cavities 1
 rescav2.txt Resonant Cavities 2
-43 Room Resonance
+roomres.txt Room Resonance
 waveguides1.txt Waveguides 1
 waveguides2.txt Waveguides 2
-46 Waveguides 3
-47 Waveguides 4
-48 Waveguides 5
+waveguides3.txt Waveguides 3
+waveguides4.txt Waveguides 4
+waveguides5.txt Waveguides 5
 paramirror1.txt Parabolic Mirror 1
 paramirror2.txt Parabolic Mirror 2
 duct.txt Sound Duct

@@ -40,6 +40,8 @@ import com.google.gwt.http.client.RequestCallback;
 import com.google.gwt.http.client.RequestException;
 import com.google.gwt.http.client.Response;
 import com.google.gwt.i18n.client.NumberFormat;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
+import com.google.gwt.storage.client.Storage;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
@@ -105,7 +107,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Vector<Setup> setupList;
 	Vector<Setup> oldSetupList;
 	Vector<DragObject> dragObjects;
-	DragObject selectedObject;
+	DragObject selectedObject, mouseObject, menuObject;
 	DragHandle draggingHandle;
 	Setup setup;
 	Scrollbar dampingBar;
@@ -155,22 +157,34 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	boolean increaseResolution = false;
 	boolean adjustResolution = true;
 	boolean rotationMode = false;
+	boolean preserveSelection = false;
 	int sourceFreqCount = -1;
 	int sourceWaveform = SWF_SIN;
 	int auxFunction;
+	int mouseWheelAccum;
 	long startTime;
+	MenuBar menuBar;
 	MenuBar mainMenuBar;
+	MenuBar fileMenuBar;
 	MenuBar elmMenuBar;
     MenuItem elmEditMenuItem;
+    MenuItem elmCutMenuItem;
+    MenuItem elmCopyMenuItem;
     MenuItem elmDeleteMenuItem;
     MenuItem elmRotateMenuItem;
+    
+    MenuItem aboutItem;
+    MenuItem importFromLocalFileItem, importFromTextItem,
+    	exportAsUrlItem, exportAsLocalFileItem, exportAsTextItem;
+    MenuItem undoItem, redoItem,
+	cutItem, copyItem, pasteItem, selectAllItem, optionsItem;
+
 	Color wallColor, posColor, negColor, zeroColor, medColor, posMedColor,
 			negMedColor, sourceColor;
 	Color schemeColors[][];
 	Point dragPoint;
 	// Method timerMethod;
 	int timerDiv;
-	ImportDialog impDialog;
 	static final int mediumMax = 191;
 	static final double mediumMaxIndex = .5;
 	static final int SWF_SIN = 0;
@@ -199,10 +213,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	static final int SRC_20S1F = 21;
 
 //	Frame iFrame;
+    LoadFile loadFileInput;
 	DockLayoutPanel layoutPanel;
 	VerticalPanel verticalPanel;
 	AbsolutePanel absolutePanel;
 	Rectangle ripArea;
+    String clipboard;
+    Vector<String> undoStack, redoStack;
 	Canvas cv;
 	Context2d cvcontext;
 	Canvas backcv;
@@ -211,9 +228,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	HandlerRegistration handler;
 	DialogBox dialogBox;
 	int verticalPanelWidth;
+	String startLayoutText = null;
+	String versionString = "1.0";
     public static NumberFormat showFormat, shortFormat, noCommaFormat;
 	static RippleSim theSim;
     static EditDialog editDialog;
+    static ExportAsUrlDialog exportAsUrlDialog;
+    static ExportAsTextDialog exportAsTextDialog;
+    static ExportAsLocalFileDialog exportAsLocalFileDialog;
+    static ImportFromTextDialog importFromTextDialog;
+    static AboutBox aboutBox;
 
 	static final int MENUBARHEIGHT = 30;
 	static final int MAXVERTICALPANELWIDTH = 166;
@@ -225,7 +249,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			updateRipple();
 		}
 	};
-	final int FASTTIMER = 16;
+	final int FASTTIMER = 33; // 16;
 
 	int getrand(int x) {
 		int q = random.nextInt();
@@ -238,7 +262,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		int width, height;
 		int fullwidth = width = (int) RootLayoutPanel.get().getOffsetWidth();
 		height = (int) RootLayoutPanel.get().getOffsetHeight();
-//		height = height - MENUBARHEIGHT;   // put this back in if we add a menu bar
+		height = height - MENUBARHEIGHT;   // put this back in if we add a menu bar
 		width = width - MAXVERTICALPANELWIDTH;
 		width = height = (width < height) ? width : height;
 		winSize = new Dimension(width, height);
@@ -400,6 +424,15 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		theSim = this;
 //		logger.log(Level.SEVERE, "RAwr");
 		
+        QueryParameters qp = new QueryParameters();
+        
+        try {
+                // look for layout embedded in URL
+                String cct=qp.getValue("rol");
+                if (cct!=null)
+                	startLayoutText = cct.replace("%24", "$");
+        } catch (Exception e) { }
+
 		cv = Canvas.createIfSupported();
 		passCanvas(cv.getCanvasElement());
 		if (cv == null) {
@@ -421,6 +454,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		setupList = new Vector<Setup>();
 		oldSetupList = new Vector<Setup>();
+        undoStack = new Vector<String>();
+        redoStack = new Vector<String>();
+
 		Setup s = new SingleSourceSetup();
 		while (s != null) {
 		    oldSetupList.addElement(s);
@@ -430,7 +466,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setupChooser = new Choice();
 		setupChooser.addChangeHandler(this);
 //		setupChooser.addItemListener(this);
-		getSetupList(false);
+		getSetupList();
 		
 		sourceChooser = new Choice();
 		sourceChooser.add("No Sources");
@@ -467,6 +503,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 		colorChooser = new Choice();
 		colorChooser.addChangeHandler(this);
+        colorChooser.addStyleName("topSpace");
 
 		waveChooser = new Choice();
 		waveChooser.add("Waves = Sound");
@@ -475,6 +512,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		waveChooser.add("Waves = FM Radio");
 		waveChooser.add("Waves = Microwave");
 		waveChooser.addChangeHandler(this);
+        waveChooser.addStyleName("topSpace");
 
 		
 		verticalPanel.add(setupChooser);
@@ -484,18 +522,20 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(colorChooser);
 		verticalPanel.add(blankButton = new Button("Clear Waves"));
 		blankButton.addClickHandler(this);
-		verticalPanel.add(blankWallsButton = new Button("Clear Walls"));
-		blankWallsButton.addClickHandler(this);
-		verticalPanel.add(exportButton = new Button("Import/Export"));
-		exportButton.addClickHandler(this);
 
 		verticalPanel.add(stoppedCheck = new Checkbox("Stopped"));
 		verticalPanel.add(view3dCheck = new Checkbox("3-D View"));
 
+        if (LoadFile.isSupported())
+            verticalPanel.add(loadFileInput = new LoadFile(this));
+
 		int res = 512;
-		verticalPanel.add(new Label("Simulation Speed"));
-		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 8, 1, 1, 30));
-		verticalPanel.add(new Label("Resolution"));
+		Label l;
+		verticalPanel.add(l = new Label("Simulation Speed"));
+        l.addStyleName("topSpace");
+		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 4, 1, 1, 30));
+		verticalPanel.add(l = new Label("Resolution"));
+        l.addStyleName("topSpace");
 		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 256, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
@@ -504,20 +544,23 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				dampingBar = new Scrollbar(Scrollbar.HORIZONTAL, 10, 1, 2, 100);
 //						);
 		dampingBar.addClickHandler(this);
-		verticalPanel.add(new Label("Source Frequency"));
+		verticalPanel.add(l = new Label("Source Frequency"));
+        l.addStyleName("topSpace");
 		verticalPanel.add(freqBar = new Scrollbar(Scrollbar.HORIZONTAL, freqBarValue = 15, 1, 1, 30,
 				new Command() {
 			public void execute() { setFreq(); }
 		}));
 //		freqBar.addClickHandler(this);
-		verticalPanel.add(new Label("Brightness"));
+		verticalPanel.add(l = new Label("Brightness"));
+        l.addStyleName("topSpace");
 		verticalPanel.add(brightnessBar = new Scrollbar(Scrollbar.HORIZONTAL, 27, 1, 1, 1200));
 //		auxBar = new Scrollbar(Scrollbar.HORIZONTAL, 1, 1, 1, 30);
 		verticalPanel.add(auxLabel = new Label("Aux Bar"));
 		verticalPanel.add(auxBar = new Scrollbar(Scrollbar.HORIZONTAL, 1, 1, 1, 30));
 		auxLabel.setVisible(false);
 		auxBar.setVisible(false);
-		verticalPanel.add(new Label("http://www.falstad.com"));
+		verticalPanel.add(l = new Label("http://www.falstad.com"));
+        l.addStyleName("topSpace");
 		resBar.setWidth(verticalPanelWidth);
 		dampingBar.setWidth(verticalPanelWidth);
 		speedBar.setWidth(verticalPanelWidth);
@@ -531,6 +574,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		absolutePanel.add(cv);
 		absolutePanel.add(coordsLabel, 0, 0);
 		
+		createMenus();
+        layoutPanel.addNorth(menuBar, MENUBARHEIGHT);
 		layoutPanel.addEast(verticalPanel, verticalPanelWidth);
 		layoutPanel.add(absolutePanel);
 		RootLayoutPanel.get().add(layoutPanel);
@@ -541,11 +586,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
         elmMenuBar = new MenuBar(true);
         elmMenuBar.addItem(elmEditMenuItem = new MenuItem("Edit",new MyCommand("elm","edit")));
-//        elmMenuBar.addItem(elmCutMenuItem = new MenuItem("Cut",new MyCommand("elm","cut")));
-//        elmMenuBar.addItem(elmCopyMenuItem = new MenuItem("Copy",new MyCommand("elm","copy")));
+        elmMenuBar.addItem(elmCutMenuItem = new MenuItem("Cut",new MyCommand("elm","cut")));
+        elmMenuBar.addItem(elmCopyMenuItem = new MenuItem("Copy",new MyCommand("elm","copy")));
         elmMenuBar.addItem(elmDeleteMenuItem = new MenuItem("Delete",new MyCommand("elm","delete")));
         elmMenuBar.addItem(elmRotateMenuItem = new MenuItem("Rotate",new MyCommand("elm","rotate")));
-//        elmMenuBar.addItem(                    new MenuItem("Duplicate",new MyCommand("elm","duplicate")));
+        elmMenuBar.addItem(                    new MenuItem("Duplicate",new MyCommand("elm","duplicate")));
 
 //		winSize = new Dimension(256, 256);
 //		if (pixels == null) {
@@ -587,7 +632,72 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		timer.scheduleRepeating(FASTTIMER);
 
 	}
+	
+	void createMenus() {
+		  fileMenuBar = new MenuBar(true);
+		  importFromLocalFileItem = new MenuItem("Import From Local File", new MyCommand("file","importfromlocalfile"));
+		  importFromLocalFileItem.setEnabled(LoadFile.isSupported());
+		  fileMenuBar.addItem(importFromLocalFileItem);
+		  importFromTextItem = new MenuItem("Import From Text", new MyCommand("file","importfromtext"));
+		  fileMenuBar.addItem(importFromTextItem);
+//		  importFromDropboxItem = new MenuItem("Import From Dropbox", new MyCommand("file", "importfromdropbox"));
+//		  fileMenuBar.addItem(importFromDropboxItem); 
+		  exportAsUrlItem = new MenuItem("Export As Link", new MyCommand("file","exportasurl"));
+		  fileMenuBar.addItem(exportAsUrlItem);
+		  exportAsLocalFileItem = new MenuItem("Export As Local File", new MyCommand("file","exportaslocalfile"));
+		  exportAsLocalFileItem.setEnabled(ExportAsLocalFileDialog.downloadIsSupported());
+		  fileMenuBar.addItem(exportAsLocalFileItem);
+		  exportAsTextItem = new MenuItem("Export As Text", new MyCommand("file","exportastext"));
+		  fileMenuBar.addItem(exportAsTextItem);
+		  fileMenuBar.addItem(getClassCheckItem("Options...", "Options"));
+		  fileMenuBar.addSeparator();
+		  aboutItem=new MenuItem("About",(Command)null);
+		  fileMenuBar.addItem(aboutItem);
+		  aboutItem.setScheduledCommand(new MyCommand("file","about"));
+		  
+          menuBar = new MenuBar();
+          menuBar.addItem("File", fileMenuBar);
 
+		MenuBar m = new MenuBar(true);
+		final String edithtml="<div style=\"display:inline-block;width:80px;\">";
+		String sn=edithtml+"Undo</div>Ctrl-Z";
+		m.addItem(undoItem = new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","undo")));
+		// undoItem.setShortcut(new MenuShortcut(KeyEvent.VK_Z));
+		sn=edithtml+"Redo</div>Ctrl-Y";
+		m.addItem(redoItem = new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","redo")));
+		//redoItem.setShortcut(new MenuShortcut(KeyEvent.VK_Z, true));
+		m.addSeparator();
+//		m.addItem(cutItem = new MenuItem("Cut", new MyCommand("edit","cut")));
+		sn=edithtml+"Cut</div>Ctrl-X";
+		m.addItem(cutItem = new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","cut")));
+		//cutItem.setShortcut(new MenuShortcut(KeyEvent.VK_X));
+		sn=edithtml+"Copy</div>Ctrl-C";
+		m.addItem(copyItem = new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","copy")));
+		sn=edithtml+"Paste</div>Ctrl-V";
+		m.addItem(pasteItem = new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","paste")));
+		//pasteItem.setShortcut(new MenuShortcut(KeyEvent.VK_V));
+		pasteItem.setEnabled(false);
+		
+		sn=edithtml+"Duplicate</div>Ctrl-D";
+		m.addItem(new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","duplicate")));
+		
+		m.addSeparator();
+		sn=edithtml+"Select All</div>Ctrl-A";
+		m.addItem(selectAllItem = new MenuItem(SafeHtmlUtils.fromTrustedString(sn), new MyCommand("edit","selectAll")));
+		//selectAllItem.setShortcut(new MenuShortcut(KeyEvent.VK_A));
+		menuBar.addItem("Edit",m);
+
+		MenuBar drawMenuBar = new MenuBar(true);
+		drawMenuBar.setAutoOpen(true);
+
+		menuBar.addItem("Add", drawMenuBar);
+		
+		mainMenuBar = new MenuBar(true);
+		mainMenuBar.setAutoOpen(true);
+		composeMainMenu(mainMenuBar);
+		composeMainMenu(drawMenuBar);
+	}
+	
     // install touch handlers to handle touch events properly on mobile devices.
     // don't feel like rewriting this in java.  Anyway, java doesn't let us create mouse
     // events and dispatch them.
@@ -650,7 +760,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Wall", "Wall"));
     	mainMenuBar.addItem(getClassCheckItem("Add Slit", "Slit"));
     	mainMenuBar.addItem(getClassCheckItem("Add Box", "Box"));
-    	mainMenuBar.addItem(getClassCheckItem("Add Source", "Source"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Point Source", "Source"));
     	mainMenuBar.addItem(getClassCheckItem("Add Line Source", "LineSource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Multipole Source", "MultipoleSource"));
     	mainMenuBar.addItem(getClassCheckItem("Add Phased Array Source", "PhasedArraySource"));
@@ -666,7 +776,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse Medium", "MediumEllipse"));
     	mainMenuBar.addItem(getClassCheckItem("Add Parabola", "Parabola"));
     	mainMenuBar.addItem(getClassCheckItem("Add Lens", "Lens"));
-    	mainMenuBar.addItem(getClassCheckItem("Options...", "Options"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
@@ -678,15 +787,56 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     }
     
     public void menuPerformed(String menu, String item) {
+    	if (item=="about")
+    		aboutBox = new AboutBox(versionString);
+    	if (item=="importfromlocalfile") {
+    		pushUndo();
+    		loadFileInput.click();
+    	}
+    	if (item=="importfromtext") {
+    		importFromTextDialog = new ImportFromTextDialog(this);
+    	}
+    	if (item=="exportasurl") {
+    		doExportAsUrl();
+    	}
+    	if (item=="exportaslocalfile")
+    		doExportAsLocalFile();
+    	if (item=="exportastext")
+    		doExportAsText();
+
+    	if (item=="undo")
+    		doUndo();
+    	if (item=="redo")
+    		doRedo();
+    	if (item == "cut") {
+    		if (menu!="elm")
+    			menuObject = null;
+    		doCut();
+    	}
+    	if (item == "copy") {
+    		if (menu!="elm")
+    			menuObject = null;
+    		doCopy();
+    	}
+    	if (item == "delete") {
+    		if (menu!="elm")
+    			menuObject = null;
+    		doDelete();
+    	}
+    	if (item=="paste")
+    		doPaste(null);
+    	if (item=="duplicate") {
+    		if (menu!="elm")
+    			menuObject = null;
+    		doDuplicate();
+    	}
+    	if (item=="selectAll")
+    		doSelectAll();
+
+    	if (menu=="elm" && contextPanel!=null)
+    		contextPanel.hide();
     	if (contextPanel != null)
     		contextPanel.hide();
-    	if (item == "delete") {
-    		if (selectedObject != null) {
-    			dragObjects.remove(selectedObject);
-    			selectedObject = null;
-    			wallsChanged();
-    		}
-    	}
     	if (item == "edit")
     		doEdit(selectedObject);
     	if (item == "rotate" && selectedObject != null && selectedObject.canRotate())
@@ -731,9 +881,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	if (item == "Slit")
     		newObject = new Slit();
     	if (newObject != null) {
+    		pushUndo();
     		newObject.setInitialPosition();
     		dragObjects.add(newObject);
     		setSelectedObject(newObject);
+    		preserveSelection = true;
     	}
     	if (item == "Options") {
     		doEdit(new EditOptions(this));
@@ -770,7 +922,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		dragObjects.add(w);
 		changedWalls = true;
 	}
-	
+
+	void createCavity(int x1, int y1, int x2, int y2) {
+		Cavity w = new Cavity(x1-windowOffsetX, y1-windowOffsetY,
+				x2-windowOffsetX, y2-windowOffsetY);
+		dragObjects.add(w);
+		changedWalls = true;
+	}
+
 	void setWall(int x, int y) {
 		walls[x + gw * y] = true;
 	}
@@ -784,8 +943,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
     void doEdit(Editable eable) {
-//        clearSelection();
-//        pushUndo();
+        clearSelection();
+        pushUndo();
         if (editDialog != null) {
     //          requestFocus();
                 editDialog.setVisible(false);
@@ -795,7 +954,25 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         editDialog.show();
     }
     
+    void doExportAsUrl()
+    {
+    	String dump = dumpLayout();
+    	exportAsUrlDialog = new ExportAsUrlDialog(dump);
+    	exportAsUrlDialog.show();
+    }
 
+    void doExportAsText()
+    {
+    	String dump = dumpLayout();
+    	exportAsTextDialog = new ExportAsTextDialog(this, dump);
+    	exportAsTextDialog.show();
+    }
+
+    void doExportAsLocalFile() {
+    	String dump = dumpLayout();
+    	exportAsLocalFileDialog = new ExportAsLocalFileDialog(dump);
+    	exportAsLocalFileDialog.show();
+    }
 
 	boolean moveRight = true;
 	boolean moveDown = true;
@@ -834,15 +1011,30 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	void drawWalls() {
 		doBlankWalls();
 		int i;
+		setAcoustic(waveChooser.getSelectedIndex() == WAVE_SOUND); // need this for mode boxes
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject obj = dragObjects.get(i);
 			double xform[] = obj.transform;
+//			console("drawwalls " + i + " " + obj + " " + xform[0] + " " + xform[1]);
 			setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
 			obj.prepare();
 		}
 		setTransform(1, 0, 0, 0, 1, 0);
 	}
-	
+
+	void drawModes() {
+		int i;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			if (obj instanceof ModeBox) {
+				double xform[] = obj.transform;
+				setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
+				((ModeBox) obj).drawMode();
+			}
+		}
+		setTransform(1, 0, 0, 0, 1, 0);
+	}
+
 	public void updateRipple() {
 			if (changedWalls) {
 				drawWalls();
@@ -863,10 +1055,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 					dragObjects.get(j).run();
 				iters++;
 				// limit frame time
-				if (System.currentTimeMillis()-time > 100)
-					break;
+//				if (System.currentTimeMillis()-time > 100)
+//					break;
 			}
-//			console("total time = " + (System.currentTimeMillis()-time));
+//			console("total time = " + (System.currentTimeMillis()-time) + " " + iterCount + " " + time);
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult, view3dCheck.getState());
 			if (!view3dCheck.getState())
@@ -895,10 +1087,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			txt = "t = " + getUnitText(getRealTime(), "s");
 		}
 		Point pt = mouseLocation;
-		coordsLabel.setText("(" + getLengthText(pt.x) + ", " + getLengthText(pt.y) + ") " + txt);
+		coordsLabel.setText("(" + getLengthText(pt.x) + ", " + getLengthText(windowHeight-1-pt.y) + ") " + txt);
 		absolutePanel.setWidgetPosition(coordsLabel,
-				(pt.x < windowWidth/4 && pt.y > windowHeight*3/4) ? cv.getOffsetWidth()-coordsLabel.getOffsetWidth() : 0,
-				cv.getOffsetHeight()-coordsLabel.getOffsetHeight());
+				0,
+				(pt.x < windowWidth/4 && pt.y > windowHeight*3/4) ? 0 :
+					cv.getOffsetHeight()-coordsLabel.getOffsetHeight());
 		coordsLabel.setVisible(true);
 	}
 	
@@ -1254,7 +1447,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	};
 
 
-    void getSetupList(final boolean openDefault) {
+    void getSetupList() {
 
     	String url;
     	url = GWT.getModuleBaseURL()+"setuplist.txt"+"?v="+random.nextInt(); 
@@ -1269,8 +1462,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 					// processing goes here
 					if (response.getStatusCode()==Response.SC_OK) {
 					String text = response.getText();
-					processSetupList(text.getBytes(), text.length(), openDefault);
-					doSetup();
+					processSetupList(text.getBytes(), text.length());
+					if (startLayoutText == null)
+						doSetup();
+					else
+						readImport(startLayoutText);
 					// end of processing
 					}
 					else 
@@ -1282,7 +1478,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
     }
 		
-    void processSetupList(byte b[], int len, final boolean openDefault) {
+    void processSetupList(byte b[], int len) {
     	int p;
     	for (p = 0; p < len; ) {
     		int l;
@@ -1359,13 +1555,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		
 	}
 
-	void doImport() {
-		if (impDialog != null) {
-//			requestFocus();
-			impDialog.setVisible(false);
-			impDialog = null;
-		}
-		
+	String dumpLayout() {
 		String dump = "";
 
 		int i;
@@ -1379,29 +1569,28 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			DragObject obj = dragObjects.get(i);
 			dump += obj.dump() + "\n";
 		}
-		DialogBox dial = new DialogBox();
-		
-		impDialog = new ImportDialog(dial, dump, this);
-		dial.setWidget(impDialog);
-		dial.center();
-		dial.show();
+		return dump;
 	}
-
-	void readImport(String s) {
-		doBlank();
-		t = 0;
-		deleteAllObjects();
+	
+	void readImport(String s) { readImport (s, false); }
+	
+	void readImport(String s, boolean retain) {
+		if (!retain) {
+			doBlank();
+			t = 0;
+			deleteAllObjects();
+		}
 		char b[] = new char[s.length()];
 		s.getChars(0, s.length(), b, 0);
 		int len = s.length();
 		int p;
 		int x = 0;
 		int srci = 0;
-		setupChooser.select(0);
-		setup = (Setup) setupList.elementAt(0);
+//		setupChooser.select(0);
+//		setup = (Setup) setupList.elementAt(0);
 		for (p = 0; p < len;) {
 			int l;
-			int linelen = 0;
+            int linelen = len-p; // IES - changed to allow the last line to not end with a delim.
 			for (l = 0; l != len - p; l++)
 				if (b[l + p] == '\n' || b[l + p] == '\r') {
 					linelen = l++;
@@ -1410,7 +1599,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 					break;
 				}
 			String line = new String(b, p, linelen);
-			StringTokenizer st = new StringTokenizer(line);
+            StringTokenizer st = new StringTokenizer(line, " +\t\n\r\f");
 			while (st.hasMoreTokens()) {
 				String type = st.nextToken();
 				int tint = type.charAt(0);
@@ -1457,64 +1646,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		}
 		setDamping();
+		wallsChanged();
+		enableDisableUI();
+		console("done with reading setup, " + dragObjects.size() + " " + changedWalls);
 	}
-
-	 class ImportDialog extends Composite implements ClickHandler {
-	
-		 Button importButton, clearButton, closeButton;
-		 TextArea text;
-		 DialogBox dialogBox;
-		 RippleSim rframe;
-		 VerticalPanel panel;
-	
-		 ImportDialog(DialogBox f, String str, RippleSim rFrame ) {
-			 initWidget(panel = new VerticalPanel());
-			 dialogBox = f;
-//			 super(f, (str.length() > 0) ? "Export" : "Import", false);
-			 rframe = rFrame;
-//			 setLayout(new ImportDialogLayout());
-			 panel.add(text = new TextArea());
-			 text.setValue(str);
-			 text.setHeight("120px");
-			 text.setWidth("180px");
-			 HorizontalPanel hPanel = new HorizontalPanel();
-			 hPanel.add(importButton = new Button("Import"));
-			 importButton.addClickHandler(this);
-			 hPanel.add(clearButton = new Button("Clear"));
-			 clearButton.addClickHandler(this);
-			 hPanel.add(closeButton = new Button("Close"));
-			 closeButton.addClickHandler(this);
-			 
-			 panel.add(hPanel);
-//			 Point x = rframe.get
-//			 resize(400, 300);
-//			 Dimension d = getSize();
-//			 setLocation(x.x + (winSize.width - d.width) / 2, x.y
-//			 + (winSize.height - d.height) / 2);
-			
-			 
-			 if (str.length() > 0)
-				 text.selectAll();
-		 }
-	
-		
-		
-		 
-
-		@Override
-		public void onClick(ClickEvent event) {
-			int i;
-			 Object src = event.getSource();
-			 if (src == importButton) {
-				 rframe.readImport(text.getText());
-				 dialogBox.hide();
-			 }
-			 if (src == closeButton)
-				 dialogBox.hide();
-			 if (src == clearButton)
-				 text.setText("");
-		}
-	 }
 
 	abstract class Setup {
 		abstract String getName();
@@ -1998,7 +2133,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sources[0].x = sources[1].x = windowOffsetX + 1;
 			sources[0].y = windowOffsetY + 1;
 			sources[1].y = windowOffsetY + windowHeight - 2;
-			
+			int i;
+			for (i = 0; i < windowHeight; i+= 40) {
+				double a = calcSourcePhase(i/(double)windowHeight, 0, 0);
+				double b = calcSourcePhase((i+39)/(double)windowHeight, 0, 0);
+				Source s = new PhasedArraySource(1, i, 1, i+39, a, b);
+				dragObjects.add(s);
+			}
 			auxBar.setValue(5);
 		}
 
@@ -2006,8 +2147,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			double d = auxBar.getValue() * 2.5 / 30.;
 			ph -= .5;
 			ph = Math.sqrt(ph * ph + d * d);
-			ph *= freqBar.getValue() * freqMult * 108;
-			return (float) Math.sin(w + ph);
+			ph *= freqBar.getValue() * freqMult * 108 /2;
+			return (float) ph;
+//			return (float) Math.sin(w + ph);
 		}
 
 		Setup createNext() {
@@ -2024,8 +2166,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			double d = auxBar.getValue() * 2.5 / 30.;
 			ph -= .5;
 			ph = Math.sqrt(ph * ph + d * d);
-			ph *= freqBar.getValue() * freqMult * 108;
-			return (float) Math.sin(w - ph);
+			ph *= freqBar.getValue() * freqMult * 108/2;
+			return (float) -ph;
+//			return (float) Math.sin(w - ph);
 		}
 
 		Setup createNext() {
@@ -2695,12 +2838,23 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int dy = windowOffsetY + windowHeight / 2 - y;
 			int dy2 = dy * dy;
 			int cx = gridSizeX / 2;
+			boolean wallOn = false;
+			int wallStart = -1;
+			halfwave = 5;
 			for (i = 0; i != windowWidth; i++) {
 				int x = windowOffsetX + i;
 				int dx = cx - x;
 				double dist = Math.sqrt(dx * dx + dy * dy);
 				dist = (dist - dy);
 				int zone = (int) (dist / halfwave);
+				boolean w = (zone & 1) == zoneq;
+				if (w && !wallOn) {
+					wallOn = true;
+					wallStart = x;
+				} else if (!w && wallOn) {
+					createWall(wallStart, y, x-1, y);
+					wallOn = false;
+				}
 				setWall(x, y, ((zone & 1) == zoneq));
 				setWall(windowOffsetX, y);
 				setWall(windowOffsetX + windowWidth - 1, y);
@@ -2809,6 +2963,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int x = 1;
 			int nx = 5;
 			int y1 = windowOffsetY + 11;
+			nx = 12;
 			while (x + nx < windowWidth) {
 				int ny = ((x + nx) * (windowHeight - 18) / windowWidth) + 6;
 				int x1 = x + windowOffsetX;
@@ -2822,6 +2977,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				}
 				setWall(x1 + nx / 2, y1 - 1, false);
 				x += nx + 1;
+				createCavity(x1-1, y1-1, x1+nx, y1+ny);
 			}
 			for (; x < windowWidth; x++)
 				setWall(x + windowOffsetX, y1 - 1);
@@ -2848,6 +3004,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			int i, j;
 			int x = 1;
 			int nx = 5;
+			nx = 12;
 			int y1 = windowOffsetY + 11;
 			int ny = 5;
 			while (x + nx < windowWidth) {
@@ -2858,6 +3015,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				}
 				for (j = 0; j != nx + 2; j++)
 					setWall(x1 + j - 1, y1 + ny);
+				createCavity(x1-1, y1-1, x1+nx, y1+ny);
 				x += nx + 1;
 				ny++;
 			}
@@ -2927,18 +3085,23 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_1S1F_PLANE);
 			int i, j;
 			int x = 1;
-			int nx = 3;
+			int nx = 10;
 			int y1 = windowOffsetY + 3;
 			int ny = windowHeight - 2;
 			while (x + nx < windowWidth) {
 				int x1 = x + windowOffsetX;
+				createWall(x1-1, y1-1, x1-1, y1+ny-2);
+				createWall(x1+nx, y1-1, x1+nx, y1+ny-2);
+				/*
 				for (i = 0; i != ny; i++) {
 					setWall(x1 - 1, y1 + i - 1);
 					setWall(x1 + nx, y1 + i - 1);
 				}
-				nx++;
+				*/
+				nx += 2;
 				x += nx;
 			}
+			createWall(x+windowOffsetX, y1-1, windowWidth+windowOffsetX, y1-1);
 			for (; x < windowWidth; x++)
 				setWall(x + windowOffsetX, y1 - 1);
 			setBrightness(6);
@@ -2974,21 +3137,35 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_1S1F_PLANE);
 			int i, j;
 			int x = 1;
-			int nx = 8;
+			int nx = 24;
 			int y1 = windowOffsetY + 3;
 			int ny = windowHeight - 2;
+//			createWall(1, y1-1, windowWidth+windowOffsetX, y1-1);
 			for (x = 1; x < windowWidth; x++)
 				setWall(x + windowOffsetX, y1 - 1);
 			x = 1;
-			j = 0;
+			j = 1;
 			while (x + nx < windowWidth && j < nx) {
 				int x1 = x + windowOffsetX;
+				createWall(x1-1, y1-1, x1-1, y1+ny-2);
+				createWall(x1+nx, y1-1, x1+nx, y1+ny-2);
 				for (i = 0; i != ny; i++) {
 					setWall(x1 - 1, y1 + i - 1);
 					setWall(x1 + nx, y1 + i - 1);
 				}
 				setWall(x1 + j++, y1 - 1, false);
+				setWall(x1 + j  , y1 - 1, false);
+				setWall(x1 + j+1, y1 - 1, false);
+				setWall(x1 + j+2, y1 - 1, false);
 				x += nx + 1;
+			}
+			for (i = 0; i < gridSizeX; i++) {
+				if (!walls[i+(y1-1)*gw])
+					continue;
+				x = i;
+				while (walls[i+(y1-1)*gw])
+					i++;
+				createWall(x, y1-1, i-1, y1-1);
 			}
 			setBrightness(89);
 			setFreqBar(16);
@@ -3025,12 +3202,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			sourceChooser.select(SRC_1S1F_PLANE);
 			int i;
 			int x = 1;
-			int nx = 8;
+			int nx = 24;
 			int y1 = windowOffsetY + 2;
 			int ny = windowHeight - 1;
 			x = 1;
 			while (x + nx < windowWidth) {
 				int x1 = x + windowOffsetX;
+				createWall(x1-1, y1-1, x1-1, y1+ny-2);
 				for (i = 0; i != ny; i++) {
 					setWall(x1 - 1, y1 + i - 1);
 					setWall(x1 + nx, y1 + i - 1);
@@ -3167,13 +3345,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		void select() {
 			sourceChooser.select(SRC_1S1F_PULSE);
-//			fixedEndsCheck.setState(false);
-			int i;
 			int cx = windowOffsetX + windowWidth / 2;
-			for (i = 0; i != windowHeight - 12; i++) {
-				setWall(cx - 3, i + windowOffsetY + 6);
-				setWall(cx + 3, i + windowOffsetY + 6);
-			}
+			createWall(cx-3, windowOffsetY+6, cx-3, windowOffsetY+windowHeight-6);
+			createWall(cx+3, windowOffsetY+6, cx+3, windowOffsetY+windowHeight-6);
 			setFreqBar(1);
 			setBrightness(60);
 		}
@@ -3806,6 +3980,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		    return;
 		dragging = false;
 		dragSet = dragClear = false;
+		if (mouseObject == null)
+			preserveSelection = false;
 	}
 
 	@Override
@@ -3840,6 +4016,48 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		dragPoint = getPointFromEvent(event);
 		dragStartX = dragX = x;
 		dragStartY = dragY = y;
+		
+		double minf = 5 * windowWidth/winSize.height;
+		double bestf = minf;
+		Point mp = getPointFromEvent(event);
+		draggingHandle = null;
+		if (selectedObject != null) {
+			int i;
+			Point p = selectedObject.inverseTransformPoint(mp);
+			for (i = 0; i != selectedObject.handles.size(); i++) {
+				DragHandle dh = selectedObject.handles.get(i);
+				double r = DragObject.hypotf(p.x-dh.x, p.y-dh.y);
+				if (r < bestf) {
+					draggingHandle = dh;
+					bestf = r;
+				}
+			}
+			if (draggingHandle != null)
+				return;
+		}
+
+		DragObject sel = null;
+		bestf = 1e8;
+		int i;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			Point p = obj.inverseTransformPoint(mp);
+			double ht = obj.hitTest(p.x, p.y);
+			
+	        // if there are no better options, select a RectDragObject if we're tapping
+	        // inside it.
+			if (ht > minf && !obj.hitTestInside(p.x, p.y))
+				continue;
+			
+			// find best match
+			if (ht < bestf) {
+				sel = obj;
+				bestf = ht;
+			}
+		}
+		if (!preserveSelection)
+			setSelectedObject(sel);
+		mouseObject = sel;
 	}
 
     static String getUnitText(double v, String u) {
@@ -3913,14 +4131,29 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			Point mp = selectedObject.inverseTransformPoint(pt);
 			draggingHandle.dragTo(mp.x, mp.y);
 			changedWalls = true;
-		} else if (selectedObject != null) {
+		} else if (isSelection()) {
 			if (dragPoint.x != pt.x || dragPoint.y != pt.y) {
-				selectedObject.drag(pt.x-dragPoint.x, pt.y-dragPoint.y);
+				int i;
+				for (i = 0; i != dragObjects.size(); i++) {
+					DragObject obj = dragObjects.get(i);
+					if (obj.isSelected())
+						obj.drag(pt.x-dragPoint.x, pt.y-dragPoint.y);
+				}
 				dragPoint = pt;
 				changedWalls = true;
 			}
 		} else
 			drawPoke(pt.x, pt.y);
+	}
+
+	boolean isSelection() {
+		int i;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject obj = dragObjects.get(i);
+			if (obj.isSelected())
+				return true;
+		}
+		return false;
 	}
 	
 	void enableDisableUI() {
@@ -3960,6 +4193,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	public void onMouseDown(MouseDownEvent event) {
 		event.preventDefault();
 		adjustResolution = false;
+		pushUndo();
 		doMouseMove(event);
 		if (rotationMode) {
 			rotationMode = false;
@@ -3970,68 +4204,47 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		if (view3dCheck.getState())
 			return;
 
-		double minf = 22 * windowWidth/winSize.height;
-		double bestf = minf;
 		Point mp = getPointFromEvent(event);
-		draggingHandle = null;
-		if (selectedObject != null) {
-			int i;
-			Point p = selectedObject.inverseTransformPoint(mp);
-			console("transform " + p.x + " " + p.y + " " + mp.x + " " + mp.y);
-			for (i = 0; i != selectedObject.handles.size(); i++) {
-				DragHandle dh = selectedObject.handles.get(i);
-				double r = DragObject.hypotf(p.x-dh.x, p.y-dh.y);
-				if (r < bestf) {
-					draggingHandle = dh;
-					bestf = r;
-				}
-			}
-			if (draggingHandle != null)
-				return;
-		}
-		
-		DragObject sel = null;
-		bestf = 1e8;
-		int i;
-		for (i = 0; i != dragObjects.size(); i++) {
-			DragObject obj = dragObjects.get(i);
-			Point p = obj.inverseTransformPoint(mp);
-			double ht = obj.hitTest(p.x, p.y);
-			
-	        // if there are no better options, select a RectDragObject if we're tapping
-	        // inside it.
-			if (ht > minf && !obj.hitTestInside(p.x, p.y))
-				continue;
-			
-			// find best match
-			if (ht < bestf) {
-				sel = obj;
-				bestf = ht;
+
+		if (draggingHandle == null) {
+			if (mouseObject == null)
+				setSelectedObject(null);
+			else {
+				if (!mouseObject.isSelected())
+					setSelectedObject(mouseObject);
+				preserveSelection = true;
 			}
 		}
-		boolean clearingSelection = (selectedObject != null && sel == null);
-		console("setting selected object to " + sel + " " + mp.x + " " + mp.y +" " + bestf);
-		setSelectedObject(sel);
+//		console("onmd " + mouseObject + " " + preserveSelection + " " + draggingHandle);
 		
-		if (selectedObject == null && !clearingSelection)
-			drawPoke(mp.x, mp.y);
+		drawPoke(mp.x, mp.y);
 	}
 	
 	void setSelectedObject(DragObject obj) {
-		if (obj == selectedObject)
+		if (obj != null && obj.isSelected())
 			return;
-		if (selectedObject != null)
-			selectedObject.deselect();
+		int i;
+		for (i = 0; i != dragObjects.size(); i++) {
+			DragObject dd = dragObjects.get(i);
+			dd.setSelected(false);
+		}
 		selectedObject = obj;
 		if (obj != null)
-			selectedObject.select();
+			selectedObject.setSelected(true);
+		preserveSelection = false;
 	}
 	
 	@Override
 	public void onMouseWheel(MouseWheelEvent event) {
         event.preventDefault();
         if (selectedObject != null && selectedObject.canRotate()) {
-        	selectedObject.rotate(event.getDeltaY()* .01);
+        	// rotate in 15 degree steps, but save mouse wheel motions that aren't large enough for a rotation
+        	int dy = event.getDeltaY() + mouseWheelAccum;
+        	int dy10 = dy/10;
+        	mouseWheelAccum = dy-dy10*10;
+        	console("wheel " + mouseWheelAccum + " " + dy + " " + dy10 + " " + event.getDeltaY());
+        	selectedObject.rotate(dy10*Math.PI/12);
+        	preserveSelection = true;
         }
         if (view3dCheck.getState()) {
         	zoom3d *= Math.exp(-event.getDeltaY() * .01);
@@ -4144,11 +4357,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		event.preventDefault();
 		if (event.getSource() == blankButton) {
 			doBlank();
+			drawModes();
 			t = 0;
-		} else if (event.getSource() == blankWallsButton) {
-			deleteAllObjects();
-		} else if (event.getSource() == exportButton) {
-			 doImport();
 		}
 		
 		if (event.getSource() == resBar) {
@@ -4181,4 +4391,221 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				setWaveType();
 	}
 
+    void pushUndo() {
+        String s = dumpLayout();
+        if (undoStack.size() > 0 &&
+                        s.compareTo(undoStack.lastElement()) == 0)
+                return;
+        redoStack.removeAllElements();
+        undoStack.add(s);
+        enableUndoRedo();
+    }
+
+    void doUndo() {
+        if (undoStack.size() == 0)
+                return;
+        redoStack.add(dumpLayout());
+        String s = undoStack.remove(undoStack.size()-1);
+        readImport(s);
+        enableUndoRedo();
+    }
+
+    void doRedo() {
+        if (redoStack.size() == 0)
+                return;
+        undoStack.add(dumpLayout());
+        String s = redoStack.remove(redoStack.size()-1);
+        readImport(s);
+        enableUndoRedo();
+    }
+
+    void enableUndoRedo() {
+        redoItem.setEnabled(redoStack.size() > 0);
+        undoItem.setEnabled(undoStack.size() > 0);
+    }
+
+    void setMenuSelection() {
+        if (menuObject != null) {
+                if (menuObject.selected)
+                        return;
+                clearSelection();
+                menuObject.setSelected(true);
+        }
+    }
+
+    void doCut() {
+        int i;
+        pushUndo();
+        setMenuSelection();
+        clipboard = "";
+        for (i = dragObjects.size()-1; i >= 0; i--) {
+        	DragObject ce = dragObjects.get(i);
+                if (ce.isSelected()) {
+                        clipboard = ce.dump() + "\n" + clipboard;
+                        ce.delete();
+                        dragObjects.removeElementAt(i);
+                }
+        }
+        writeClipboardToStorage();
+        enablePaste();
+        wallsChanged();
+    }
+
+    void writeClipboardToStorage() {
+        Storage stor = Storage.getLocalStorageIfSupported();
+        if (stor == null)
+                return;
+        stor.setItem("rippleClipboard", clipboard);
+    }
+    
+    void readClipboardFromStorage() {
+        Storage stor = Storage.getLocalStorageIfSupported();
+        if (stor == null)
+                return;
+        clipboard = stor.getItem("rippleClipboard");
+    }
+
+    void doDelete() {
+        int i;
+        pushUndo();
+        setMenuSelection();
+        boolean hasDeleted = false;
+
+        for (i = dragObjects.size()-1; i >= 0; i--) {
+        	DragObject ce = dragObjects.get(i);
+                if (ce.isSelected()) {
+                        ce.delete();
+                        dragObjects.removeElementAt(i);
+                        hasDeleted = true;
+                }
+        }
+
+        if ( !hasDeleted )
+        {
+        	/*
+            for (i = dragObjects.size()-1; i >= 0; i--) {
+            	DragObject ce = dragObjects.get(i);
+                        if (ce == mouseObject) {
+                                ce.delete();
+                                dragObjects.removeElementAt(i);
+                                hasDeleted = true;
+                                setMouseElm(null);
+                                break;
+                        }
+                }
+                */
+        }
+
+        if ( hasDeleted )
+        	wallsChanged();
+    }
+
+    void doCopy() {
+        int i;
+        clipboard = "";
+        setMenuSelection();
+        for (i = dragObjects.size()-1; i >= 0; i--) {
+        	DragObject ce = dragObjects.get(i);
+        	if (ce.isSelected())
+        		clipboard += ce.dump() + "\n";
+        }
+        writeClipboardToStorage();
+        enablePaste();
+    }
+
+    void enablePaste() {
+        if (clipboard == null || clipboard.length() == 0)
+                readClipboardFromStorage();
+        pasteItem.setEnabled(clipboard != null && clipboard.length() > 0);
+    }
+
+    void doDuplicate() {
+        int i;
+        String s = "";
+        setMenuSelection();
+        for (i = 0; i != dragObjects.size(); i++) {
+        	DragObject ce = dragObjects.get(i);
+        	if (ce.isSelected())
+        		s += ce.dump() + "\n";
+        }
+        doPaste(s);
+    }
+
+    void doPaste(String dump) {
+        pushUndo();
+        clearSelection();
+        int i;
+        int oldsz = dragObjects.size();
+        if (dump != null)
+            readImport(dump, true);
+        else {
+            readClipboardFromStorage();
+            readImport(clipboard, true);
+        }
+
+        // select new items
+        for (i = oldsz; i != dragObjects.size(); i++) {
+        	DragObject ce = dragObjects.get(i);
+        	int j;
+        	// make sure new items are not on top of old items
+        	for (j = 0; j != oldsz; j++) {
+        		if (ce.boundingBox().equals(dragObjects.get(j).boundingBox())) {
+        			// move new one slightly
+        			ce.drag(windowWidth/32, 0);
+        			j = -1;
+        		}
+        	}
+        	ce.setSelected(true);
+        }
+        if (dragObjects.size() == oldsz+1)
+        	selectedObject = dragObjects.get(oldsz);
+        preserveSelection = true;
+        wallsChanged();
+    }
+
+    void clearSelection() {
+        int i;
+        for (i = 0; i != dragObjects.size(); i++) {
+        	DragObject ce = dragObjects.get(i);
+            ce.setSelected(false);
+        }
+        selectedObject = null;
+        preserveSelection = false;
+    }
+    
+    void doSelectAll() {
+        int i;
+        for (i = 0; i != dragObjects.size(); i++) {
+        	DragObject ce = dragObjects.get(i);
+        	ce.setSelected(true);
+        }
+        selectedObject = null;
+        preserveSelection = true;
+    }
+
+    void createNewLoadFile() {
+        // This is a hack to fix what IMHO is a bug in the <INPUT FILE element
+        // reloading the same file doesn't create a change event so importing the same file twice
+        // doesn't work unless you destroy the original input element and replace it with a new one
+        int idx=verticalPanel.getWidgetIndex(loadFileInput);
+        LoadFile newlf=new LoadFile(this);
+        verticalPanel.insert(newlf, idx);
+        verticalPanel.remove(idx+1);
+        loadFileInput=newlf;
+    }
+
+    boolean useFreqTimeZero() {
+    	// automatically adjust face to avoid discontinuities in sine wave when we change frequencies, unless
+    	// the user manually adjusts phase in one of the sources
+        int i;
+        for (i = 0; i != dragObjects.size(); i++) {
+        	DragObject ce = dragObjects.get(i);
+        	if (ce instanceof Source) {
+        		Source s = (Source) ce;
+        		if (s.phaseShift != 0)
+        			return false;
+        	}
+        }
+        return true;
+    }
 }

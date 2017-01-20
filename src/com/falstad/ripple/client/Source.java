@@ -57,7 +57,10 @@ public class Source extends DragObject {
 	void setFrequency(double f) {
 		double oldfreq = frequency;
 		frequency = f;
-		freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
+		if (sim.useFreqTimeZero())
+			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
+		else
+			freqTimeZero = 0;
 	}
 	
 	double getValue() {
@@ -139,7 +142,10 @@ public class Source extends DragObject {
 			double wavelength = sim.waveSpeed/ei.value;
     		frequency = freqScale * sim.lengthScale /wavelength;
     		enforceMaxFrequency();
-			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
+    		if (sim.useFreqTimeZero())
+    			freqTimeZero = sim.t-oldfreq*(sim.t-freqTimeZero)/frequency;
+    		else
+    			freqTimeZero = 0;
 			wavelengthEditInfo.value = getWavelength();
 			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
 		}
@@ -183,4 +189,11 @@ public class Source extends DragObject {
     }
     
 	int getDumpType() { return 's'; }
+	
+	String selectText() {
+		if (waveform != WF_SINE)
+			return null;
+		return RippleSim.getUnitText(getRealFrequency(), "Hz");
+	}
+
 }

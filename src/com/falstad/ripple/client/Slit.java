@@ -39,7 +39,7 @@ public class Slit extends Wall {
 		RippleSim.drawWall(h2.x, h2.y, (int)(h1.x+dx*n1), (int)(h1.y+dy*n1)); 
 	}
 
-	void drawWall(double x1, double y1, double x2, double y2) {
+	static void drawWall(double x1, double y1, double x2, double y2) {
 		RippleSim.drawWall((int)x1, (int)y1, (int)x2, (int)y2);
 	}
 	

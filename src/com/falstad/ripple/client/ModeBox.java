@@ -25,13 +25,7 @@ public class ModeBox extends RectDragObject {
 		return Math.abs(sim.random.nextInt());
 	}
 	
-	void prepare() {
-		if (box) {
-			RippleSim.drawWall(topLeft.x, topLeft.y, topRight.x, topRight.y);
-			RippleSim.drawWall(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y); 
-			RippleSim.drawWall(bottomRight.x, bottomRight.y, topRight.x, topRight.y);
-			RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
-		}
+	void drawMode() {
 		if (randomize) {
 			int m1x = rand() % xmode;
 			int m1y = rand() % ymode;
@@ -49,6 +43,16 @@ public class ModeBox extends RectDragObject {
 			RippleSim.drawModes(topLeft.x+1, topLeft.y+1, bottomRight.x-1, bottomRight.y-1,
 				xmode*Math.PI, ymode*Math.PI, 0, 0);
 		}
+	}
+	
+	void prepare() {
+		if (box) {
+			RippleSim.drawWall(topLeft.x, topLeft.y, topRight.x, topRight.y);
+			RippleSim.drawWall(topLeft.x, topLeft.y, bottomLeft.x, bottomLeft.y); 
+			RippleSim.drawWall(bottomRight.x, bottomRight.y, topRight.x, topRight.y);
+			RippleSim.drawWall(bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
+		}
+		drawMode();
 	}
 	
     public EditInfo getEditInfo(int n) {
