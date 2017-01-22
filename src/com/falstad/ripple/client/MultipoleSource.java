@@ -37,7 +37,6 @@ public class MultipoleSource extends Source {
     		double a = angle+Math.PI*2*i/sourceCount;
     		dh.x = (int)(dh0.x+separation*Math.cos(a));
     		dh.y = (int)(dh0.y+separation*Math.sin(a));
-    		sim.console("handle at " + dh.x + " " +dh.y);
 		}
 	}
 	

@@ -76,7 +76,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     }
 
     function initShaders() {
-    	shaderProgramMain = initShader("shader-fs", "shader-vs", null);
+    	shaderProgramMain = initShader("shader-display-fs", "shader-vs", null);
     	shaderProgramMain.brightnessUniform = gl.getUniformLocation(shaderProgramMain, "brightness");
     	shaderProgramMain.colorsUniform = gl.getUniformLocation(shaderProgramMain, "colors");
 
@@ -85,11 +85,11 @@ var transform = [1, 0, 0, 1, 0, 0];
     	shaderProgram3D.colorsUniform = gl.getUniformLocation(shaderProgram3D, "colors");
     	shaderProgram3D.xOffsetUniform = gl.getUniformLocation(shaderProgram3D, "xOffset");
 
-    	shaderProgramFixed = initShader("shader-screen-fs", "shader-vs", null);
+    	shaderProgramFixed = initShader("shader-simulate-fs", "shader-vs", null);
     	shaderProgramFixed.stepSizeXUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeX");
     	shaderProgramFixed.stepSizeYUniform = gl.getUniformLocation(shaderProgramFixed, "stepSizeY");
 
-    	shaderProgramAcoustic = initShader("shader-screen-fs", "shader-vs", "#define ACOUSTIC 1\n");
+    	shaderProgramAcoustic = initShader("shader-simulate-fs", "shader-vs", "#define ACOUSTIC 1\n");
     	shaderProgramAcoustic.stepSizeXUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeX");
     	shaderProgramAcoustic.stepSizeYUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeY");
 
@@ -264,6 +264,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	simDamping = [];
     	simTextureCoord = [];
     	
+    	// visible area
     	setPosRect(windowOffsetX, windowOffsetY, gridSizeX-windowOffsetX, gridSizeY-windowOffsetY);
 
     	// sides
@@ -301,6 +302,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	simVertexDampingBuffer.numItems = simDamping.length;
     }
 
+    // create coordinates for a rectangular portion of the grid, making sure to set the damping attribute
+    // appropriately (1 for visible area, slightly less for offscreen area used to avoid reflections at edges)
     function setPosRect(x1, y1, x2, y2) {
     	var points = [ x2, y1, x1, y1, x2, y2, x1, y1, x2, y2, x1, y2 ];
     	var i;
@@ -316,52 +319,10 @@ var transform = [1, 0, 0, 1, 0, 0];
     	}
     }
 
-    var laptopVertexPositionBuffer;
-    var laptopVertexTextureCoordBuffer;
-    var laptopVertexIndexBuffer;
     var sourceBuffer;
     var colorBuffer;
     var colors;
 
-    var moonAngle = 180;
-    var cubeAngle = 0;
-
-    /*
-    function drawWallsNotUsed(rt) {
-    	var rttFramebuffer = rt.framebuffer;
-        gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        mat4.identity(pMatrix);
-        mat4.identity(mvMatrix);
-
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, 0.0, 1.0);
-
-        var positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        var coords = [
-            0.0, 0.0,
-            0.0, 0.5,
-            0.5, 0.0,
-            0.0, 0.0,
-        ];
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
-        positionBuffer.itemSize = 2;
-        positionBuffer.numItems = 4;
-
-        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, positionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        setMatrixUniforms(shaderProgramDraw);
-        //gl.drawArrays(gl.TRIANGLE_STRIP, 0, positionBuffer.numItems);
-    }
-*/
-    
     function simulate() {
     	var rt = renderTexture1;
     	renderTexture1 = renderTexture2;
@@ -433,9 +394,13 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     function drawHandle(x, y) {
         gl.useProgram(shaderProgramDraw);
+        if (sim.drawingSelection >= 0) {
+        	drawSelectedHandle(x, y);
+        	return;
+        }
         if (sim.drawingSelection < 0)
         	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1, 1.0, 1.0, 1.0);
-        else
+        else 
         	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection,
         			sim.drawingSelection, 0, 1.0);
 
@@ -450,9 +415,31 @@ var transform = [1, 0, 0, 1, 0, 0];
 
         mat4.identity(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
-        gl.lineWidth(sim.drawingSelection < 0 ? 1 : 2);
+//        gl.lineWidth(sim.drawingSelection < 0 ? 1 : 2);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINE_LOOP, 0, 4);
+        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+    }
+
+    function drawSelectedHandle(x, y) {
+       	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection, sim.drawingSelection, 0, 0.5);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
+        var cx = -1+2*(x+.5)/windowWidth;
+        var cy = +1-2*(y+.5)/windowHeight;
+        var ox = .012;
+        var oy = .012;
+        var coords = [ cx-ox, cy-oy, cx+ox, cy-oy, cx-ox, cy+oy, cx+ox, cy+oy ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        mat4.identity(pMatrix);
+        setMatrixUniforms(shaderProgramDraw);
+//        gl.lineWidth(sim.drawingSelection < 0 ? 1 : 2);
+        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.enable(gl.BLEND);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        gl.disable(gl.BLEND);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
     }
 
@@ -469,11 +456,7 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
         setMatrixUniforms(shaderProgramDraw);
-//        gl.lineWidth(3);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINES, 0, 4);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
@@ -498,8 +481,6 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         gl.drawArrays(gl.LINES, 0, 2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-
-        //mvPopMatrix();
     }
 
     function drawPhasedArray(x, y, x2, y2, f1, f2) {
@@ -507,7 +488,6 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
         gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
         gl.colorMask(true, true, false, false);
-//      gl.clear(gl.COLOR_BUFFER_BIT);
         gl.useProgram(shaderProgramMode);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
@@ -540,24 +520,22 @@ var transform = [1, 0, 0, 1, 0, 0];
     function loadMatrix(mtx) {
     	mat4.identity(mtx);
     	if (sim.drawingSelection > 0) {
+    		// drawing on screen
         	mtx[0] = +2/windowWidth;
         	mtx[5] = -2/windowHeight;
         	mtx[12] = -1 + .5*mtx[0];
         	mtx[13] = +1 + .5*mtx[5];
     	} else {
+    		// drawing walls into render texture
         	mtx[0] = +2/gridSizeX;
         	mtx[5] = -2/gridSizeY;
         	mtx[12] = -1 + (.5+windowOffsetX)*mtx[0];
         	mtx[13] = +1 + (.5+windowOffsetY)*mtx[5];
     	}
-//    	transform[2] = transform[5] = 1;
     	mat4.multiply(mtx, [transform[0], transform[3], 0, 0,
     	                    transform[1], transform[4], 0, 0,
     	                    0,0,1,0,
     	                    transform[2], transform[5], 0, 1], mtx);
-//    	mat4.translate(mtx, [75, 75, 0], mtx);
-//    	mat4.rotateZ(mtx, Math.PI/3, mtx);
-//    	mat4.translate(mtx, [-75, -75, 0], mtx);
     }
 
     function setupForDrawing(v) {
@@ -569,31 +547,50 @@ var transform = [1, 0, 0, 1, 0, 0];
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
     		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
             gl.useProgram(shaderProgramDraw);
+            
+            // blue channel used for walls and media
     		gl.colorMask(false, false, true, false);
     		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 0.0, 0.0, v, 1.0);
     	}
+    }
+    
+    // gl.lineWidth does not work on Chrome, so we need this workaround to draw lines as
+    // triangle strips instead
+    function thickLinePoints(arr, thick) {
+    	var i;
+    	var result = [];
+    	var ax = 0, ay = 0;
+    	for (i = 0; i < arr.length-2; i += 2) {
+    		var dx = arr[i+2] - arr[i];
+    		var dy = arr[i+3] - arr[i+1];
+    		var dl = Math.hypot(dx, dy);
+    		if (dl > 0) {
+    			var mult = thick/dl;
+    			ax =  mult*dy;
+    			ay = -mult*dx;
+    		}	
+    		result.push(arr[i]+ax, arr[i+1]+ay, arr[i]-ax, arr[i+1]-ay);
+    	}
+    	result.push(arr[i]+ax, arr[i+1]+ay, arr[i]-ax, arr[i+1]-ay);
+    	return result;
     }
     
     function drawWall(x, y, x2, y2, v) {
     	setupForDrawing(v);
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         // draw line back on itself, or else one endpoint won't be drawn
-        srcCoords[0] = x;
-        srcCoords[1] = y;
-        srcCoords[2] = x2;
-        srcCoords[3] = y2;
-        srcCoords[4] = x;
-        srcCoords[5] = y;
+        srcCoords = thickLinePoints([x, y, x2, y2, x, y], 1.5);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
-        gl.lineWidth(3);
+//        gl.lineWidth(3);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.drawArrays(gl.LINE_STRIP, 0, 3);
+//        gl.drawArrays(gl.LINE_STRIP, 0, 3);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 6);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.lineWidth(1);
+//        gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -652,7 +649,10 @@ var transform = [1, 0, 0, 1, 0, 0];
         for (i = xr-1; i >= -xr; i--) {
         	coords.push(cx-i, cy+yr*Math.sqrt(1-i*i/(xr*xr)));
         }
-        gl.lineWidth(4);
+        coords.push(coords[0], coords[1]);
+//        console.log("coords for ellipse: " + coords);
+        coords = thickLinePoints(coords, 1.5);
+//        gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -660,9 +660,9 @@ var transform = [1, 0, 0, 1, 0, 0];
 
         loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
-        gl.drawArrays(gl.LINE_LOOP, 0, coords.length/2);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.lineWidth(1);
+//        gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -679,7 +679,8 @@ var transform = [1, 0, 0, 1, 0, 0];
         	var x0 = i-w2;
         	coords.push(x1+i, y1+h-a*x0*x0);
         }
-        gl.lineWidth(4);
+        coords = thickLinePoints(coords, 1.5);
+//        gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -687,9 +688,9 @@ var transform = [1, 0, 0, 1, 0, 0];
 
         loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
-        gl.drawArrays(gl.LINE_STRIP, 0, coords.length/2);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.lineWidth(1);
+//        gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -707,7 +708,6 @@ var transform = [1, 0, 0, 1, 0, 0];
         	var y = ym*(Math.sqrt(1+x*x)-1);
         	coords.push(x1+i, y1+y);
         }
-        gl.lineWidth(4);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -717,7 +717,6 @@ var transform = [1, 0, 0, 1, 0, 0];
         setMatrixUniforms(shaderProgramDraw);
         gl.drawArrays(gl.TRIANGLE_FAN, 0, coords.length/2);
         gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -847,8 +846,6 @@ var transform = [1, 0, 0, 1, 0, 0];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    var laptopAngle = 0;
-
     function drawScene(bright) {
         gl.useProgram(shaderProgramMain);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -902,10 +899,6 @@ var transform = [1, 0, 0, 1, 0, 0];
         mat4.translate(mvMatrix, [0, 0, -3.2]);
         mat4.multiply(mvMatrix, matrix3d, mvMatrix);
         mat4.scale(mvMatrix, [zoom3d, zoom3d, zoom3d]);
-//        mat4.rotate(mvMatrix, degToRad(laptopAngle), [0, 1, 0]);
-//        mat4.rotate(mvMatrix, degToRad(-60), [1, 0, 0]);
-//        mat4.rotateZ(mvMatrix, viewAngle);
-//        mat4.rotateX(mvMatrix, Math.PI/4, mvMatrix);
         
 	// draw result
         gl.bindBuffer(gl.ARRAY_BUFFER, screen3DTextureBuffer);
@@ -932,26 +925,6 @@ var transform = [1, 0, 0, 1, 0, 0];
     }
 
     var lastTime = 0;
-
-    function animate() {
-        var timeNow = new Date().getTime();
-        if (lastTime != 0) {
-            var elapsed = timeNow - lastTime;
-
-            moonAngle += 0.05 * elapsed;
-            cubeAngle += 0.05 * elapsed;
-
-            //laptopAngle -= 0.005 * elapsed;
-        }
-        lastTime = timeNow;
-    }
-
-
-    function tick() {
-        requestAnimFrame(tick);
-        drawScene();
-    }
-
 
     document.passCanvas = function passCanvas (cv, sim_) {
     	canvas = cv;

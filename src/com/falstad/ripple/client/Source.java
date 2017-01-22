@@ -165,7 +165,6 @@ public class Source extends DragObject {
     		frequencyEditInfo.value = getRealFrequency();
 			EditDialog.theEditDialog.updateValue(frequencyEditInfo);
     	}
-    	RippleSim.console("wavelength = " + (freqScale/frequency));
     }
 
     void enforceMaxFrequency() {

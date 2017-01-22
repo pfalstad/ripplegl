@@ -44,7 +44,6 @@ public class Cavity extends RectDragObject {
 		double n1 = .5-slitWidth/len/2;
 		Slit.drawWall(h1.x, h1.y, h1.x+dx*n1, h1.y+dy*n1);
 		Slit.drawWall(h2.x, h2.y, h2.x-dx*n1, h2.y-dy*n1);
-		RippleSim.console("cavity " + len + " " + n1);
 	}
 
 	@Override void drawSelection() {

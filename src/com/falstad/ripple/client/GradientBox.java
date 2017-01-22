@@ -23,18 +23,18 @@ public class GradientBox extends RectDragObject {
 	
     public EditInfo getEditInfo(int n) {
         if (n == 0)
-            return new EditInfo("Speed Index 1", speedIndex, 0, 1).
+            return new EditInfo("Refractive Index 1", Math.sqrt(1/speedIndex), 0, 1).
                 setDimensionless();
         if (n == 1)
-            return new EditInfo("Speed Index 2", speedIndex2, 0, 1).
+            return new EditInfo("Refractive Index 2", Math.sqrt(1/speedIndex2), 0, 1).
                 setDimensionless();
         return null;
     }
     public void setEditValue(int n, EditInfo ei) {
         if (n == 0)
-        	speedIndex = ei.value;
+        	speedIndex = MediumBox.getRefractiveIndex(ei.value);
         if (n == 1)
-        	speedIndex2 = ei.value;
+        	speedIndex2 = MediumBox.getRefractiveIndex(ei.value);
     }
 
 	int getDumpType() { return 'g'; }

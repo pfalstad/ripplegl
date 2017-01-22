@@ -77,7 +77,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	int gridSizeX;
 	int gridSizeY;
 	int gridSizeXY;
-	int gw;
 	int windowWidth = 50;
 	int windowHeight = 50;
 	int windowOffsetX = 0;
@@ -119,12 +118,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	double zoom3d = 1.2;
 	Point mouseLocation;
 	static final double pi = 3.14159265358979323846;
-	float func[];
-	float funci[];
-	float damp[];
-	boolean walls[];
-	boolean exceptional[];
-	int medium[];
 	static final int MODE_SETFUNC = 0;
 	static final int MODE_WALLS = 1;
 	static final int MODE_MEDIUM = 2;
@@ -467,7 +460,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 4, 1, 1, 30));
 		verticalPanel.add(l = new Label("Resolution"));
         l.addStyleName("topSpace");
-		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, /*256*/32, 1024));
+		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 256, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
 //		verticalPanel.add(new Label("Damping"));
@@ -840,33 +833,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	return null;
     }
     
-	void createWall(int x1, int y1, int x2, int y2) {
-		console("createwall " + x1 + " " + y1 + " " +x2 + " "  + y2);
-		Wall w = new Wall(x1-windowOffsetX, y1-windowOffsetY,
-				x2-windowOffsetX, y2-windowOffsetY);
-		dragObjects.add(w);
-		changedWalls = true;
-	}
-
-	void createCavity(int x1, int y1, int x2, int y2) {
-		Cavity w = new Cavity(x1-windowOffsetX, y1-windowOffsetY,
-				x2-windowOffsetX, y2-windowOffsetY);
-		dragObjects.add(w);
-		changedWalls = true;
-	}
-
-	void setWall(int x, int y) {
-		walls[x + gw * y] = true;
-	}
-
-	void setWall(int x, int y, boolean b) {
-		walls[x + gw * y] = b;
-	}
-
-	void setMedium(int x, int y, int q) {
-		medium[x + gw * y] = q;
-	}
-
     void doEdit(Editable eable) {
         clearSelection();
         pushUndo();
@@ -915,20 +881,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		sourceCount = -1;
 		System.out.print("reinit " + gridSizeX + " " + gridSizeY + "\n");
 		gridSizeXY = gridSizeX * gridSizeY;
-		gw = gridSizeY;
-		func = new float[gridSizeXY];
-		funci = new float[gridSizeXY];
-		damp = new float[gridSizeXY];
-		exceptional = new boolean[gridSizeXY];
-		medium = new int[gridSizeXY];
-		walls = new boolean[gridSizeXY];
-		int i, j;
-		for (i = 0; i != gridSizeXY; i++)
-			damp[i] = 1f; // (float) dampcoef;
-		for (i = 0; i != windowOffsetX; i++)
-			for (j = 0; j != gridSizeX; j++)
-				damp[i + j * gw] = damp[gridSizeX - 1 - i + gw * j] = damp[j
-						+ gw * i] = damp[j + (gridSizeY - 1 - i) * gw] = (float) (.999 - (windowOffsetX - i) * .002);
 		if (setup)
 			doSetup();
 	}
@@ -965,7 +917,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				drawWalls();
 				changedWalls = false;
 			}
-			long time = System.currentTimeMillis();
 			int iterCount = speedBar.getValue();
 			if (stoppedCheck.getState())
 				iterCount = 0;
@@ -1051,11 +1002,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		double adj = newfreq - oldfreq;
 //		freqTimeZero = t - oldfreq * (t - freqTimeZero) / newfreq;
 		int i;
-		console("setfreq " + newfreq + " " + freqBar.getValue());
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject obj = dragObjects.get(i);
 			if (obj instanceof Source) {
-				console("src " + obj);
 				((Source) obj).setFrequency(newfreq);
 			}
 		}
@@ -1492,12 +1441,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		dragStartX = dragX = x;
 		dragStartY = dragY = y;
 		
-		double minf = 5 * windowWidth/winSize.height;
+		double minf = 5 * windowWidth/winSize.height + 1;
 		double bestf = minf;
 		Point mp = getPointFromEvent(event);
 		draggingHandle = null;
 		if (selectedObject != null) {
 			int i;
+			// select handle?
 			Point p = selectedObject.inverseTransformPoint(mp);
 			for (i = 0; i != selectedObject.handles.size(); i++) {
 				DragHandle dh = selectedObject.handles.get(i);
@@ -1511,6 +1461,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				return;
 		}
 
+		// select object?
 		DragObject sel = null;
 		bestf = 1e8;
 		int i;
@@ -1651,7 +1602,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			if (src1 == null)
 				src1 = src;
 			else if (Math.abs(src.frequency-src1.frequency) > 1e-3) {
-				console("frequency diff " + src.frequency + " "+ src1.frequency);
 				src1 = null;
 				break;
 			}
@@ -1660,7 +1610,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			freqBar.disable();
 		else {
 			freqBar.enable();
-			console("Setting frequency to " + src1.frequency/freqMult);
 			freqBar.setValue((int)(src1.frequency/freqMult));
 		}
 	}
