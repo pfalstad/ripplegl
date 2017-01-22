@@ -187,7 +187,7 @@ void main()
                 highp float mid = .25*(mid1+mid2+mid3+mid4); // equilibrium position is average of neighbors
                 highp float med = pv.b;
 				med *= 1.5;
-                newvel = med*(mid-pos)+vel*vDamping; // was .3, could be .6, .15
+                newvel = med*(mid-pos)+vel*vDamping;
         		newpos = pos+newvel;
         }
 		// update position and velocity

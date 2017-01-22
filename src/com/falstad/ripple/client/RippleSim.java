@@ -133,6 +133,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	public boolean useFrame;
 	boolean showControls;
 	boolean changedWalls;
+	boolean ignoreFreqBarSetting;
 	double t;
 	double lengthScale, waveSpeed;
 	int iters;
@@ -271,10 +272,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	    console.log(text);
 	}-*/;
 
+    // pass the canvas element to ripple.js and install all the callbacks we need into "this" 
 	static native void passCanvas(CanvasElement cv) /*-{
 		$doc.passCanvas(cv, this);
 	}-*/;
 
+	// call into ripple.js
 	static native void updateRippleGL(double bright, boolean threed) /*-{
 		if (threed)
 			this.updateRipple3D(bright);
@@ -431,7 +434,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		waveChooser = new Choice();
 		waveChooser.add("Waves = Sound");
-		waveChooser.add("Waves = Visible Light");
+		waveChooser.add("Waves = Visible Light/IR/UV");
 		waveChooser.add("Waves = AM Radio");
 		waveChooser.add("Waves = FM Radio");
 		waveChooser.add("Waves = Microwave");
@@ -472,7 +475,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         l.addStyleName("topSpace");
 		verticalPanel.add(freqBar = new Scrollbar(Scrollbar.HORIZONTAL, freqBarValue = 15, 1, 1, 30,
 				new Command() {
-			public void execute() { setFreq(); }
+			public void execute() { if (!ignoreFreqBarSetting) setFreq(); }
 		}));
 //		freqBar.addClickHandler(this);
 		verticalPanel.add(l = new Label("Brightness"));
@@ -885,20 +888,21 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			doSetup();
 	}
 
-	void drawWalls() {
+	// draw objects into blue channel of render texture
+	void prepareObjects() {
 		doBlankWalls();
 		int i;
 		setAcoustic(waveChooser.getSelectedIndex() == WAVE_SOUND); // need this for mode boxes
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject obj = dragObjects.get(i);
 			double xform[] = obj.transform;
-//			console("drawwalls " + i + " " + obj + " " + xform[0] + " " + xform[1]);
 			setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
 			obj.prepare();
 		}
 		setTransform(1, 0, 0, 0, 1, 0);
 	}
 
+	// draw mode boxes
 	void drawModes() {
 		int i;
 		for (i = 0; i != dragObjects.size(); i++) {
@@ -914,7 +918,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 	public void updateRipple() {
 			if (changedWalls) {
-				drawWalls();
+				prepareObjects();
 				changedWalls = false;
 			}
 			int iterCount = speedBar.getValue();
@@ -925,16 +929,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			for (i = 0; i != iterCount; i++) {
 				simulate();
 				t += .25;
-//				doSources(.25);
 				int j;
 				for (j = 0; j != dragObjects.size(); j++)
 					dragObjects.get(j).run();
 				iters++;
-				// limit frame time
-//				if (System.currentTimeMillis()-time > 100)
-//					break;
 			}
-//			console("total time = " + (System.currentTimeMillis()-time) + " " + iterCount + " " + time);
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult, view3dCheck.getState());
 			if (!view3dCheck.getState())
@@ -1060,11 +1059,16 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		selectedObject = null;
 		doBlankWalls();
 	}
+
+	void resetTime() {
+		t = 0;
+		iters = 0;
+	}
 	
 	void doSetup() {
 		if (setupList.size() == 0)
 			return;
-		t = 0;
+		resetTime();
 		if (resBar.getValue() < 32)
 			setResolution(32);
 		doBlank();
@@ -1076,7 +1080,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setWaveType();
 		setup = (Setup) setupList.elementAt(setupChooser.getSelectedIndex());
 		setup.select();
-		int i;
 		setDamping();
 		enableDisableUI();
 	}
@@ -1136,6 +1139,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		dragObjects.add(mb);
 	}
 
+	// set length scale and speed for a particular wave type, which determines what units we report
+	// in coordinates box and editing values.  Also, choice of sound/non-sound affects boundary conditions
+	// at walls.
 	void setWaveType() {
 		double windowScale = 25;
 		switch (waveChooser.getSelectedIndex()) {
@@ -1234,7 +1240,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 
 	void readSetupFile(String str, String title) {
-		t = 0;
+		resetTime();
 		console("reading example " + str);
 		String url=GWT.getModuleBaseURL()+"examples/"+str+"?v="+random.nextInt(); 
 		loadFileFromURL(url);
@@ -1286,7 +1292,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	void readImport(String s, boolean retain) {
 		if (!retain) {
 			doBlank();
-			t = 0;
+			resetTime();
 			deleteAllObjects();
 		}
 		char b[] = new char[s.length()];
@@ -1496,8 +1502,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
             return showFormat.format(v*1e9) + " n" + u;
         if (va < 1e-3)
             return showFormat.format(v*1e6) + " \u03bc" + u;
-        if (va < 1)
+        if (va < 1e-2 || (va < 1 && u.equals("s")))
             return showFormat.format(v*1e3) + " m" + u;
+        if (va < 1)
+            return showFormat.format(v*1e2) + " c" + u;
         if (va < 1e3)
             return showFormat.format(v) + " " + u;
         if (va < 1e6)
@@ -1523,8 +1531,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
             return shortFormat.format(v*1e9) + "n" + u;
         if (va < 1e-3)
             return shortFormat.format(v*1e6) + "\u03bc" + u;
-        if (va < 1)
+        if (va < 1e-2)
             return shortFormat.format(v*1e3) + "m" + u;
+        if (va < 1)
+            return shortFormat.format(v*1e2) + "c" + u;
         if (va < 1e3)
             return shortFormat.format(v) + u;
         if (va < 1e6)
@@ -1545,6 +1555,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	return getUnitText(px * lengthScale, "m");
     }
 
+    // convert pixels/iter to m/s and return as string
+    String getSpeedText(double px) {
+    	return getUnitText(px*4 *2*Math.PI*waveSpeed/Source.freqScale, "m/s");
+    }
+    
 	void dragMouse(MouseEvent<?> event) {
 		if (view3dCheck.getState()) {
 			view3dDrag(event);
@@ -1610,7 +1625,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			freqBar.disable();
 		else {
 			freqBar.enable();
+			ignoreFreqBarSetting = true;
 			freqBar.setValue((int)(src1.frequency/freqMult));
+			ignoreFreqBarSetting = false;
 		}
 	}
 	
@@ -1702,6 +1719,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
     void longPress() {
+    	menuX = dragStartX;
+    	menuY = dragStartY;
     	doPopupMenu();
     }
 
@@ -1783,7 +1802,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		if (event.getSource() == blankButton) {
 			doBlank();
 			drawModes();
-			t = 0;
+			resetTime();
 		}
 		
 		if (event.getSource() == resBar) {
@@ -1792,8 +1811,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 		if (event.getSource() == dampingBar)
 		    setDamping();
-		if (event.getSource() == freqBar)
+		if (event.getSource() == freqBar) {
 		    setFreq();
+		}
 	}
 
 	@Override
@@ -2016,8 +2036,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     }
 
     boolean useFreqTimeZero() {
-    	// automatically adjust face to avoid discontinuities in sine wave when we change frequencies, unless
-    	// the user manually adjusts phase in one of the sources
+    	// automatically adjust phase to avoid discontinuities in sine wave when we change frequencies.
+    	// But don't do that if the user manually adjusts phase in one of the sources.
         int i;
         for (i = 0; i != dragObjects.size(); i++) {
         	DragObject ce = dragObjects.get(i);

@@ -177,7 +177,7 @@ public class Source extends DragObject {
 		EditDialog.theEditDialog.updateValue(frequencyEditInfo);
 		wavelengthEditInfo.value = getWavelength();
 		EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
-}
+    }
     
     double getWavelength() {
     	return (freqScale/frequency) * sim.lengthScale;
@@ -192,7 +192,7 @@ public class Source extends DragObject {
 	String selectText() {
 		if (waveform != WF_SINE)
 			return null;
-		return RippleSim.getUnitText(getRealFrequency(), "Hz") + " \u03bb = " +
+		return RippleSim.getUnitText(getRealFrequency(), "Hz") + ", \u03bb = " +
 			sim.getUnitText(getWavelength(), "m");
 	}
 

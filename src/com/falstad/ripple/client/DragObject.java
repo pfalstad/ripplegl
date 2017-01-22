@@ -48,12 +48,13 @@ public abstract class DragObject implements Editable {
 		centerX = cx;
 		centerY = cy;
 		
-		// make translation-rotation-translation matrix
+		// make translation-rotation-translation matrix to rotate object about cx,cy
 		transform[0] = transform[4] = Math.cos(rotation);
 		transform[1] = Math.sin(rotation);
 		transform[3] = -transform[1];
 		transform[2] = (1-transform[0])*cx - transform[1]*cy;
 		transform[5] = -transform[3]*cx + (1-transform[4])*cy;
+		// inverse transform
 		invTransform[0] = invTransform[4] = transform[0];
 		invTransform[1] = transform[3];
 		invTransform[3] = transform[1];
@@ -107,7 +108,6 @@ public abstract class DragObject implements Editable {
 	}
 
 	void rotateTo(int x, int y) {
-//		sim.console("rotateto " + x + " " + y + " " + centerX + " " + centerY);
 		rotation = Math.atan2(-y+centerY, x-centerX)-Math.PI/2;
 		double step = Math.PI/12;
 		rotation = Math.round(rotation/step)*step;
@@ -245,9 +245,13 @@ public abstract class DragObject implements Editable {
 	String selectText() {
 		if (handles.size() != 2)
 			return null;
+		return "length = " + sim.getLengthText(length());
+	}
+	
+	double length() {
 		DragHandle dh1 = handles.get(0);
 		DragHandle dh2 = handles.get(1);
 		double len = Math.round(Math.hypot(dh1.x-dh2.x, dh1.y-dh2.y));
-		return "length = " + sim.getLengthText(len);
+		return len;
 	}
 }

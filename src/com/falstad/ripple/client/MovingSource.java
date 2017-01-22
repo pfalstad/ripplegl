@@ -25,6 +25,9 @@ public class MovingSource extends Source {
         DragHandle dh1 = handles.get(0);
         DragHandle dh2 = handles.get(1);
         
+        if (sim.iters < startIter)
+        	startIter = sim.iters;
+        
         double dur = (phase == 0 || phase == 2) ? moveDuration : pauseDuration;
         double step = (sim.iters-startIter)/dur;
         if (step > 1) {
@@ -72,5 +75,12 @@ public class MovingSource extends Source {
 	}
 
 	int getDumpType() { return 'd'; }
+
+	String selectText() {
+		String s = super.selectText();
+		if (s == null)
+			return null;
+		return s + ", v = " + sim.getSpeedText(length()/moveDuration);
+	}
 
 }

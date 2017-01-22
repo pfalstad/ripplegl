@@ -23,6 +23,9 @@ public class MovingWall extends RectDragObject {
 	String dump() { return super.dump() + " " + moveDuration + " " + pauseDuration; }
 	
 	void run() {
+        if (sim.iters < startIter)
+        	startIter = sim.iters;
+		
         RippleSim.setTransform(transform[0], transform[1], transform[2], transform[3], transform[4], transform[5]);
 		RippleSim.clearWall(lastWallX1, lastWallY1, lastWallX2, lastWallY2);
 		int x1 = topLeft.x;
@@ -69,6 +72,11 @@ public class MovingWall extends RectDragObject {
         if (n == 1)
         	pauseDuration = (int)ei.value;
     }
+
+	String selectText() {
+		String s = super.selectText();
+		return s + ", v = " + sim.getSpeedText(height()/(double)moveDuration);
+	}
 
 	int getDumpType() { return 'W'; }
 
