@@ -193,7 +193,8 @@ public class Source extends DragObject {
 	String selectText() {
 		if (waveform != WF_SINE)
 			return null;
-		return RippleSim.getUnitText(getRealFrequency(), "Hz");
+		return RippleSim.getUnitText(getRealFrequency(), "Hz") + " \u03bb = " +
+			sim.getUnitText(getWavelength(), "m");
 	}
 
 }
