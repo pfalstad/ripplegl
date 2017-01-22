@@ -99,8 +99,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Button exportButton;
 	Checkbox stoppedCheck;
 	Checkbox view3dCheck;
-	Choice modeChooser;
-	Choice sourceChooser;
 	Choice setupChooser;
 	Choice colorChooser;
 	Choice waveChooser;
@@ -114,8 +112,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Scrollbar freqBar;
 	Scrollbar resBar;
 	Scrollbar brightnessBar;
-	Scrollbar auxBar;
-	Label auxLabel;
 	double dampcoef;
 	double freqTimeZero;
 	double movingSourcePos = 0;
@@ -129,7 +125,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	boolean walls[];
 	boolean exceptional[];
 	int medium[];
-	OscSource sources[];
 	static final int MODE_SETFUNC = 0;
 	static final int MODE_WALLS = 1;
 	static final int MODE_MEDIUM = 2;
@@ -189,27 +184,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	static final int SWF_SIN = 0;
 	static final int SWF_SQUARE = 1;
 	static final int SWF_PULSE = 2;
-	static final int AUX_NONE = 0;
-	static final int AUX_PHASE = 1;
-	static final int AUX_FREQ = 2;
-	static final int AUX_SPEED = 3;
-	static final int SRC_NONE = 0;
-	static final int SRC_1S1F = 1;
-	static final int SRC_2S1F = 3;
-	static final int SRC_2S2F = 4;
-	static final int SRC_4S1F = 6;
-	static final int SRC_1S1F_PULSE = 8;
-	static final int SRC_1S1F_MOVING = 9;
-	static final int SRC_1S1F_PLANE = 10;
-	static final int SRC_2S1F_PLANE = 12;
-	static final int SRC_1S1F_PLANE_PULSE = 14;
-	static final int SRC_1S1F_PLANE_PHASE = 15;
-	static final int SRC_6S1F = 16;
-	static final int SRC_8S1F = 17;
-	static final int SRC_10S1F = 18;
-	static final int SRC_12S1F = 19;
-	static final int SRC_16S1F = 20;
-	static final int SRC_20S1F = 21;
 
 //	Frame iFrame;
     LoadFile loadFileInput;
@@ -274,7 +248,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			speedBar.setWidth(verticalPanelWidth);
 			freqBar.setWidth(verticalPanelWidth);
 			brightnessBar.setWidth(verticalPanelWidth);
-			auxBar.setWidth(verticalPanelWidth);
 		}
 		if (cv != null) {
 			cv.setWidth(width + "PX");
@@ -442,7 +415,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			return;
 		}
 
-		sources = new OscSource[20];
 		dragObjects = new Vector<DragObject>();
 		cvcontext = cv.getContext2d();
 //		backcv = Canvas.createIfSupported();
@@ -459,39 +431,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setupChooser.addChangeHandler(this);
 //		setupChooser.addItemListener(this);
 		getSetupList();
-		
-		sourceChooser = new Choice();
-		sourceChooser.add("No Sources");
-		sourceChooser.add("1 Src, 1 Freq");
-		sourceChooser.add("1 Src, 2 Freq");
-		sourceChooser.add("2 Src, 1 Freq");
-		sourceChooser.add("2 Src, 2 Freq");
-		sourceChooser.add("3 Src, 1 Freq");
-		sourceChooser.add("4 Src, 1 Freq");
-		sourceChooser.add("1 Src, 1 Freq (Square)");
-		sourceChooser.add("1 Src, 1 Freq (Pulse)");
-		sourceChooser.add("1 Moving Src");
-		sourceChooser.add("1 Plane Src, 1 Freq");
-		sourceChooser.add("1 Plane Src, 2 Freq");
-		sourceChooser.add("2 Plane Src, 1 Freq");
-		sourceChooser.add("2 Plane Src, 2 Freq");
-		sourceChooser.add("1 Plane 1 Freq (Pulse)");
-		sourceChooser.add("1 Plane 1 Freq w/Phase");
-		sourceChooser.add("6 Src, 1 Freq");
-		sourceChooser.add("8 Src, 1 Freq");
-		sourceChooser.add("10 Src, 1 Freq");
-		sourceChooser.add("12 Src, 1 Freq");
-		sourceChooser.add("16 Src, 1 Freq");
-		sourceChooser.add("20 Src, 1 Freq");
-		sourceChooser.select(SRC_1S1F);
-		sourceChooser.addChangeHandler(this);
-
-		modeChooser = new Choice();
-		modeChooser.add("Mouse = Edit Wave");
-		modeChooser.add("Mouse = Edit Walls");
-		modeChooser.add("Mouse = Edit Medium");
-		modeChooser.add("Mouse = Hold Wave");
-		modeChooser.addChangeHandler(this);
 		
 		colorChooser = new Choice();
 		colorChooser.addChangeHandler(this);
@@ -528,7 +467,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 4, 1, 1, 30));
 		verticalPanel.add(l = new Label("Resolution"));
         l.addStyleName("topSpace");
-		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 256, 1024));
+		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, /*256*/32, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
 //		verticalPanel.add(new Label("Damping"));
@@ -546,11 +485,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(l = new Label("Brightness"));
         l.addStyleName("topSpace");
 		verticalPanel.add(brightnessBar = new Scrollbar(Scrollbar.HORIZONTAL, 27, 1, 1, 1200));
-//		auxBar = new Scrollbar(Scrollbar.HORIZONTAL, 1, 1, 1, 30);
-		verticalPanel.add(auxLabel = new Label("Aux Bar"));
-		verticalPanel.add(auxBar = new Scrollbar(Scrollbar.HORIZONTAL, 1, 1, 1, 30));
-		auxLabel.setVisible(false);
-		auxBar.setVisible(false);
 		verticalPanel.add(l = new Label("http://www.falstad.com"));
         l.addStyleName("topSpace");
 		resBar.setWidth(verticalPanelWidth);
@@ -558,7 +492,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		speedBar.setWidth(verticalPanelWidth);
 		freqBar.setWidth(verticalPanelWidth);
 		brightnessBar.setWidth(verticalPanelWidth);
-		auxBar.setWidth(verticalPanelWidth);
 
 		absolutePanel = new AbsolutePanel();
 		coordsLabel = new Label("(0,0)");
@@ -1187,26 +1120,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			setResolution(32);
 		doBlank();
 		deleteAllObjects();
-		// don't use previous source positions, use defaults
-		sourceCount = -1;
-		sourceChooser.select(SRC_1S1F);
 		dampingBar.setValue(10);
 		setFreqBar(5);
 		setBrightness(10);
-		auxBar.setValue(1);
 		waveChooser.setSelectedIndex(1);
 		setWaveType();
 		setup = (Setup) setupList.elementAt(setupChooser.getSelectedIndex());
 		setup.select();
-		setup.doSetupSources();
 		int i;
-		if (sourcePlane) {
-			for (i = 0; i != sourceCount; i += 2)
-				dragObjects.add(new LineSource(sources[i].x-windowOffsetX, sources[i].y-windowOffsetY,
-						sources[i+1].x-windowOffsetX, sources[i+1].y-windowOffsetY));
-		} else
-			for (i = 0; i != sourceCount; i++)
-				dragObjects.add(new Source(sources[i].x-windowOffsetX, sources[i].y-windowOffsetY));
 		setDamping();
 		enableDisableUI();
 	}
@@ -1293,152 +1214,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		lengthScale = windowScale/512;
 	}
 	
-	void setSources() {
-		sourceIndex = sourceChooser.getSelectedIndex();
-		int oldSCount = sourceCount;
-		boolean oldPlane = sourcePlane;
-		sourceFreqCount = 1;
-		sourcePlane = (sourceChooser.getSelectedIndex() >= SRC_1S1F_PLANE && sourceChooser
-				.getSelectedIndex() < SRC_6S1F);
-		sourceMoving = false;
-		sourceWaveform = SWF_SIN;
-		sourceCount = 1;
-		boolean phase = false;
-		switch (sourceChooser.getSelectedIndex()) {
-		case 0:
-			sourceCount = 0;
-			break;
-		case 2:
-			sourceFreqCount = 2;
-			break;
-		case 3:
-			sourceCount = 2;
-			break;
-		case 4:
-			sourceCount = 2;
-			sourceFreqCount = 2;
-			break;
-		case 5:
-			sourceCount = 3;
-			break;
-		case 6:
-			sourceCount = 4;
-			break;
-		case 7:
-			sourceWaveform = SWF_SQUARE;
-			break;
-		case 8:
-			sourceWaveform = SWF_PULSE;
-			break;
-		case 9:
-			sourceMoving = true;
-			break;
-		case 11:
-			sourceFreqCount = 2;
-			break;
-		case 12:
-			sourceCount = 2;
-			break;
-		case 13:
-			sourceCount = sourceFreqCount = 2;
-			break;
-		case 14:
-			sourceWaveform = SWF_PULSE;
-			break;
-		case 15:
-			phase = true;
-			break;
-		case 16:
-			sourceCount = 6;
-			break;
-		case 17:
-			sourceCount = 8;
-			break;
-		case 18:
-			sourceCount = 10;
-			break;
-		case 19:
-			sourceCount = 12;
-			break;
-		case 20:
-			sourceCount = 16;
-			break;
-		case 21:
-			sourceCount = 20;
-			break;
-		}
-		if (sourceFreqCount >= 2) {
-			auxFunction = AUX_FREQ;
-			auxBar.setValue(freqBar.getValue());
-			if (sourceCount == 2)
-				auxLabel.setText("Source 2 Frequency");
-			else
-				auxLabel.setText("2nd Frequency");
-		} else if (sourceCount == 2 || sourceCount >= 4 || phase) {
-			auxFunction = AUX_PHASE;
-			auxBar.setValue(1);
-			auxLabel.setText("Phase Difference");
-		} else if (sourceMoving) {
-			auxFunction = AUX_SPEED;
-			auxBar.setValue(7);
-			auxLabel.setText("Source Speed");
-		} else {
-			auxFunction = AUX_NONE;
-			 auxBar.setVisible(false);
-			 auxLabel.setVisible(false);
-		}
-		if (auxFunction != AUX_NONE) {
-			 auxBar.setVisible(true);
-			 auxLabel.setVisible(true);
-		}
-		// validate();
-
-		if (sourcePlane) {
-			sourceCount *= 2;
-			if (!(oldPlane && oldSCount == sourceCount)) {
-				int x2 = windowOffsetX + windowWidth - 1;
-				int y2 = windowOffsetY + windowHeight - 1;
-				sources[0] = new OscSource(windowOffsetX, windowOffsetY + 1);
-				sources[1] = new OscSource(x2, windowOffsetY + 1);
-				sources[2] = new OscSource(windowOffsetX, y2);
-				sources[3] = new OscSource(x2, y2);
-			}
-		} else if (!(oldSCount == sourceCount && !oldPlane)) {
-			sources[0] = new OscSource(gridSizeX / 2, windowOffsetY + 1);
-			sources[1] = new OscSource(gridSizeX / 2, gridSizeY - windowOffsetY
-					- 2);
-			sources[2] = new OscSource(windowOffsetX + 1, gridSizeY / 2);
-			sources[3] = new OscSource(gridSizeX - windowOffsetX - 2,
-					gridSizeY / 2);
-			int i;
-			for (i = 4; i < sourceCount; i++)
-				sources[i] = new OscSource(windowOffsetX + 1 + i * 2,
-						gridSizeY / 2);
-		}
-	}
-
-	class OscSource {
-		int x;
-		int y;
-		float v;
-
-		OscSource(int xx, int yy) {
-			x = xx;
-			y = yy;
-		}
-
-		int getScreenX() {
-			return ((x - windowOffsetX) * winSize.width + winSize.width / 2)
-					/ windowWidth;
-		}
-
-		int getScreenY() {
-			return ((y - windowOffsetY) * winSize.height + winSize.height / 2)
-					/ windowHeight;
-		}
-	};
-
-
     void getSetupList() {
 
     	String url;
@@ -1641,10 +1416,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
 		void select() {}
 
-		void doSetupSources() {
-			setSources();
-		}
-
 		void deselect() {
 		}
 
@@ -1818,8 +1589,9 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         return shortFormat.format(v*1e-18) + "E" + u;
     }
     
-    String getLengthText(double v) {
-    	return getUnitText(v * lengthScale, "m");
+    // convert pixels to meters and return as string
+    String getLengthText(double px) {
+    	return getUnitText(px * lengthScale, "m");
     }
 
 	void dragMouse(MouseEvent<?> event) {
@@ -2081,10 +1853,6 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			if (event.getSource() == stoppedCheck) {
 //			    cv.repaint();
 			    return;
-			}
-			if (event.getSource() == sourceChooser) {
-			    if (sourceChooser.getSelectedIndex() != sourceIndex)
-				setSources();
 			}
 			if (event.getSource() == setupChooser)
 			    doSetup();
