@@ -48,7 +48,7 @@ public class AboutBox extends PopupPanel {
 		vp = new VerticalPanel();
 		setWidget(vp);
 		vp.setWidth("400px");
-		vp.add(new HTML("<p>Circuit Simulator version "+version+".</p>"+
+		vp.add(new HTML("<p>Ripple Tank version "+version+".</p>"+
 		"<p>Originally written in Java by Paul Falstad.<br><a href=\"http://www.falstad.com/\" target=\"_blank\">http://www.falstad.com/</a></p>"+
 		"<p>Javascript/WebGL conversion by Paul Falstad, based on work by Iain Sharp and Erick Maldonado.</p>"+
 		"<p style=\"font-size:9px\">This program is free software: you can redistribute it and/or modify it "+
@@ -60,7 +60,7 @@ public class AboutBox extends PopupPanel {
 		"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the "+
 		"GNU General Public License for more details.</p>"+
 		"<p style=\"font-size:9px\">For details of licensing see <A href=\"http://www.gnu.org/licenses/\" target=\"_blank\">http://www.gnu.org/licenses/</A>.</p>"+
-		"<p style=\"font-size:9px\">Source code:<A href=\"https://github.com/pfalstad/ripple\" target=\"_blank\">https://github.com/pfalstad/ripple</A></p>"));
+		"<p style=\"font-size:9px\">Source code:<A href=\"https://github.com/pfalstad/ripplegl\" target=\"_blank\">https://github.com/pfalstad/ripplegl</A></p>"));
 		
 		
 		vp.add(okButton = new Button("OK"));

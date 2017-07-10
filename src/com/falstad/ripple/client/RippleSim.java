@@ -407,6 +407,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			medColor, sourceColor, zeroColor3d);
 	}-*/;
 
+	Frame iFrame;
+	
 	public void init() {
 		theSim = this;
 //		logger.log(Level.SEVERE, "RAwr");
@@ -479,10 +481,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		Label l;
 		verticalPanel.add(l = new Label("Simulation Speed"));
         l.addStyleName("topSpace");
-		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 4, 1, 1, 30));
+		verticalPanel.add(speedBar = new Scrollbar(Scrollbar.HORIZONTAL, 4, 1, 1, 40));
 		verticalPanel.add(l = new Label("Resolution"));
         l.addStyleName("topSpace");
-		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 256, 1024));
+		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 384, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
 //		verticalPanel.add(new Label("Damping"));
@@ -500,7 +502,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(l = new Label("Brightness"));
         l.addStyleName("topSpace");
 		verticalPanel.add(brightnessBar = new Scrollbar(Scrollbar.HORIZONTAL, 27, 1, 1, 1200));
-		verticalPanel.add(l = new Label("http://www.falstad.com"));
+		
+        verticalPanel.add(iFrame = new Frame("iframe.html"));
+        iFrame.setWidth(verticalPanelWidth+"px");
+        iFrame.setHeight("100 px");
+        iFrame.getElement().setAttribute("scrolling", "no");
+
+		
         l.addStyleName("topSpace");
 		resBar.setWidth(verticalPanelWidth);
 		dampingBar.setWidth(verticalPanelWidth);
