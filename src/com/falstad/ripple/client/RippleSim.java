@@ -340,8 +340,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawPoke(x, y);
 	}-*/;
 
-	static native void drawLineSource(int x1, int y1, int x2, int y2, double value) /*-{
-		this.drawLineSource(x1, y1, x2, y2, value);
+	static native void drawLineSource(int x1, int y1, int x2, int y2, double value, boolean gauss) /*-{
+		this.drawLineSource(x1, y1, x2, y2, value, gauss);
 	}-*/;
 
 	static native void drawPhasedArray(int x1, int y1, int x2, int y2, double w1, double w2) /*-{

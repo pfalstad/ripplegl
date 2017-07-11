@@ -94,6 +94,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	shaderProgramAcoustic.stepSizeYUniform = gl.getUniformLocation(shaderProgramAcoustic, "stepSizeY");
 
     	shaderProgramDraw = initShader("shader-draw-fs", "shader-draw-vs");
+    	shaderProgramDrawLine = initShader("shader-draw-line-fs", "shader-draw-vs");
     	shaderProgramMode = initShader("shader-mode-fs", "shader-draw-vs");
     }
 
@@ -464,9 +465,8 @@ var transform = [1, 0, 0, 1, 0, 0];
         //mvPopMatrix();
     }
 
-    function drawLineSource(x, y, x2, y2, f) {
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, f, 0.0, 1.0, 1.0);
+    function drawLineSource(x, y, x2, y2, f, gauss) {
+        gl.useProgram(shaderProgramDrawLine);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         srcCoords[0] = x;
@@ -474,13 +474,22 @@ var transform = [1, 0, 0, 1, 0, 0];
         srcCoords[2] = x2;
         srcCoords[3] = y2;
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(shaderProgramDrawLine.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        var colors = [ f,0,1, 0, f,0,1,0 ];
+        if (gauss)
+        	colors = [ f,0,1,-3, f,0,1,3 ];
+        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(shaderProgramDrawLine.colorAttribute, colorBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         loadMatrix(pMatrix);
-        setMatrixUniforms(shaderProgramDraw);
-        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        setMatrixUniforms(shaderProgramDrawLine);
+        gl.enableVertexAttribArray(shaderProgramDrawLine.colorAttribute)
+        gl.enableVertexAttribArray(shaderProgramDrawLine.vertexPositionAttribute);
         gl.drawArrays(gl.LINES, 0, 2);
-        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
+        gl.disableVertexAttribArray(shaderProgramDrawLine.colorAttribute);
+        gl.disableVertexAttribArray(shaderProgramDrawLine.vertexPositionAttribute);
     }
 
     function drawPhasedArray(x, y, x2, y2, f1, f2) {
@@ -977,7 +986,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     		initBuffers();
     	}
     	sim.drawSource = function (x, y, f) { drawSource(x, y, f); }
-    	sim.drawLineSource = function (x, y, x2, y2, f) { drawLineSource(x, y, x2, y2, f); }
+    	sim.drawLineSource = function (x, y, x2, y2, f, g) { drawLineSource(x, y, x2, y2, f, g); }
     	sim.drawPhasedArray = function (x, y, x2, y2, f1, f2) { drawPhasedArray(x, y, x2, y2, f1, f2); }
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
     	sim.drawFocus = function (x, y) { drawFocus(x, y); }

@@ -21,6 +21,8 @@ package com.falstad.ripple.client;
 
 public class LineSource extends Source {
 
+	boolean gauss;
+	
 	LineSource() {
 		handles.add(new DragHandle(this));
 		setTransform();
@@ -28,6 +30,7 @@ public class LineSource extends Source {
 	LineSource(StringTokenizer st) {
 		super(st, 2);
 		setTransform();
+		gauss = (flags & 1) != 0;
 	}
 	
 	LineSource(int x, int y, int x2, int y2) {
@@ -46,12 +49,41 @@ public class LineSource extends Source {
 		DragHandle dh2 = handles.get(1);
         double v = getValue();
         if (enabled)
-        	RippleSim.drawLineSource(dh1.x, dh1.y, dh2.x, dh2.y, v); 
+        	RippleSim.drawLineSource(dh1.x, dh1.y, dh2.x, dh2.y, v, gauss); 
 	}
 
 	@Override void drawSelection() {
 		RippleSim.drawWall(handles.get(0).x, handles.get(0).y, handles.get(1).x, handles.get(1).y);
 	}
+
+	String dump() {
+		flags = (gauss) ? 1 : 0;
+		return super.dump();
+	}
+	
+    public EditInfo getEditInfo(int n) {
+    	// we don't put the Gaussian checkbox at the end because Source has a variable number of edit info
+    	// items.  So we insert it at n == 1.
+    	if (n == 0)
+    		return super.getEditInfo(n);
+    	if (n == 1) {
+            EditInfo ei = new EditInfo("", 0, -1, -1);
+            ei.checkbox = new Checkbox("Gaussian", gauss);
+    		return ei;
+    	}
+    	return super.getEditInfo(n-1);
+    }
+    
+    public void setEditValue(int n, EditInfo ei) {
+    	if (n == 0) {
+    		super.setEditValue(n, ei);
+    	}
+    	if (n == 1) {
+    		gauss = ei.checkbox.getState();
+    		return;
+    	}
+    	super.setEditValue(n-1, ei);
+    }
 
 	int getDumpType() { return 'S'; }
 
