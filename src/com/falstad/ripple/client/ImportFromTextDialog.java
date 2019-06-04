@@ -51,7 +51,7 @@ TextArea textArea;
 		vp.add(new Label("Paste the text file for your layout here..."));
 //		vp.add(textBox = new RichTextArea());
 		vp.add(textArea = new TextArea());
-		textArea.setWidth("300px");
+		textArea.setWidth("800px");
 		textArea.setHeight("200px");
 		hp = new HorizontalPanel();
 		vp.add(hp);

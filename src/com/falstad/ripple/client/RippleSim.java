@@ -215,7 +215,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	DialogBox dialogBox;
 	int verticalPanelWidth;
 	String startLayoutText = null;
-	String versionString = "1.0";
+	String versionString = "1.1";
     public static NumberFormat showFormat, shortFormat, noCommaFormat;
 	static RippleSim theSim;
     static EditDialog editDialog;
@@ -1457,6 +1457,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		return t/(2*Math.PI*waveSpeed/Source.freqScale / lengthScale);
 	}
 	
+	double timeToRealTime(double x) {
+		return x/(2*Math.PI*waveSpeed/Source.freqScale / lengthScale);
+	}
+	
+	double realTimeToTime(double x) {
+		return x * (2*Math.PI*waveSpeed/Source.freqScale / lengthScale);
+	}
+	
 	void doMouseMove(MouseEvent<?> event) {
 		Point pt = getPointFromEvent(event);
 		mouseLocation = pt;
@@ -1521,8 +1529,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 
     static String getUnitText(double v, String u) {
         double va = Math.abs(v);
-        if (va < 1e-14)
+        if (va < 1e-17)
             return "0 " + u;
+        if (va < 1e-12)
+        	return showFormat.format(v*1e15) + " f" + u;
         if (va < 1e-9)
             return showFormat.format(v*1e12) + " p" + u;
         if (va < 1e-6)

@@ -23,9 +23,11 @@ public class Source extends DragObject {
     static final int WF_SINE = 0;
     static final int WF_PULSE = 1;
     static final int WF_PACKET = 2;
+    static final int FLAG_STRENGTH = 2; 
     int waveform;
     double frequency, phaseShift, freqTimeZero;
-    double length, delay;
+    double strength;
+    double length, delay, startDelay;
     boolean enabled;
     EditInfo frequencyEditInfo, wavelengthEditInfo;
     
@@ -45,6 +47,7 @@ public class Source extends DragObject {
 		
 		length = 10;
 		delay = 100;
+		strength = 1;
 		setTransform();
 	}
 	
@@ -57,6 +60,11 @@ public class Source extends DragObject {
 		phaseShift = new Double(st.nextToken()).doubleValue();
 		length = new Double(st.nextToken()).doubleValue();
 		delay = new Double(st.nextToken()).doubleValue();
+		strength = 1;
+		if ((flags & FLAG_STRENGTH) != 0) {
+			strength = new Double(st.nextToken()).doubleValue();
+			startDelay = new Double(st.nextToken()).doubleValue();
+		}
 		setTransform();
 	}
 	
@@ -65,12 +73,14 @@ public class Source extends DragObject {
 		frequency = .5;
 		length = 10;
 		delay = 100;
+		strength = 1;
 		setTransform();
 	}
 	
 	String dump() {
+		flags |= FLAG_STRENGTH;
 		return super.dump() + " " + waveform + " " + frequency + " " + phaseShift + " " + length + " " +
-					delay;
+					delay + " " + strength + " " + startDelay;
 	}
 	
 	void setFrequency(double f) {
@@ -84,12 +94,15 @@ public class Source extends DragObject {
 	
 	double getValue() {
 		enabled = true;
+		double t = sim.t-startDelay;
+		if (t < 0)
+			return 0;
 		if (waveform == WF_SINE) {
 			double freq = frequency; // sim.freqBar.getValue() * RippleSim.freqMult;
-			double w = freq * (sim.t - freqTimeZero) + phaseShift;
-			return Math.cos(w);
+			double w = freq * (t - freqTimeZero) + phaseShift;
+			return Math.cos(w)*strength;
 		}
-		double w = sim.t % (length + delay);
+		double w = t % (length + delay);
 		double v = 1;
 		if (w > length) {
 			enabled = false;
@@ -97,7 +110,7 @@ public class Source extends DragObject {
 		}
 		if (waveform == WF_PACKET && v > 0)
 			v = Math.cos(frequency * sim.t) * Math.sin(w*Math.PI/length);
-		return v;
+		return v * strength;
 	}
 	
 	void run() {
@@ -126,21 +139,25 @@ public class Source extends DragObject {
     		ei.choice.select(waveform);
     		return ei;
     	}
+    	if (n == 1)
+    		return new EditInfo("Strength", strength, 0, 1).setDimensionless();
+    	if (n == 2)
+    		return new EditInfo("Start Delay (s)", sim.timeToRealTime(startDelay), 0, 1).setNoCenti();
     	if (waveform == WF_SINE) {
-    		if (n == 1)
+    		if (n == 3)
     			return frequencyEditInfo = new EditInfo("Frequency (Hz)", getRealFrequency(), 4, 500);
-    		if (n == 2)
+    		if (n == 4)
     			return new EditInfo("Phase Offset (degrees)", phaseShift*180/Math.PI,
     					-180, 180).setDimensionless();
     	} else {
-    		if (n == 1)
-    			return new EditInfo("Length", length, 0, 0);
-    		if (n == 2)
-    			return new EditInfo("Delay", delay, 0, 0);
-    		if (waveform == WF_PACKET && n == 3)
+    		if (n == 3)
+    			return new EditInfo("On Duration (s)", sim.timeToRealTime(length), 0, 0).setNoCenti();
+    		if (n == 4)
+    			return new EditInfo("Off Duration (s)", sim.timeToRealTime(delay), 0, 0).setNoCenti();
+    		if (waveform == WF_PACKET && n == 5)
     			return frequencyEditInfo = new EditInfo("Frequency (Hz)", getRealFrequency(), 4, 500);
     	}
-    	if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 4))
+    	if ((waveform == WF_SINE && n == 5) || (waveform == WF_PACKET && n == 6))
     		return wavelengthEditInfo = new EditInfo("Wavelength (m)", getWavelength(), 4, 500);
     	return null;
     }
@@ -154,7 +171,11 @@ public class Source extends DragObject {
     		if (waveform != ow)
     			ei.newDialog = true;
     	}
-		if ((waveform == WF_SINE && n == 1) || (waveform == WF_PACKET && n == 3)) {
+    	if (n == 1)
+    		strength = ei.value;
+    	if (n == 2)
+    		startDelay = sim.realTimeToTime(ei.value);
+		if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 5)) {
 			// adjust time zero to maintain continuity in the waveform
 			// even though the frequency has changed.
 			double oldfreq = frequency;
@@ -169,15 +190,15 @@ public class Source extends DragObject {
 			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
 		}
     	if (waveform == WF_SINE) {
-    		if (n == 2)
+    		if (n == 4)
     			phaseShift = ei.value*Math.PI/180;
     	} else {
-    		if (n == 1)
-    			length = ei.value;
-    		if (n == 2)
-    			delay = ei.value;
+    		if (n == 3)
+    			length = sim.realTimeToTime(ei.value);
+    		if (n == 4)
+    			delay = sim.realTimeToTime(ei.value);
     	}
-    	if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 4)) {
+    	if ((waveform == WF_SINE && n == 5) || (waveform == WF_PACKET && n == 6)) {
     		// set wavelength
     		frequency = freqScale * sim.lengthScale /ei.value;
     		enforceMaxFrequency();

@@ -104,14 +104,15 @@ public class ExportAsUrlDialog extends DialogBox {
 		vp.add(new Label("URL for this layout is..."));
 		if (dump.length()>2000) {
 			vp.add( la1= new Label("Warning: this URL is longer than 2000 characters and may not work in some browsers.", true));
-			la1.setWidth("300px");
+			la1.setWidth("800px");
 		}
 		vp.add(tb = new RichTextArea());
 		tb.setText(dump);
+		tb.setWidth("800px");
 //		tb.setMaxLength(s.length());
 //		tb.setVisibleLength(s.length());
 		vp.add(la2 = new Label("To save this URL select it all (eg click in text and type control-A) and copy to your clipboard (eg control-C) before pasting to a suitable place.", true));
-		la2.setWidth("300px");
+		la2.setWidth("800px");
 		
 		HorizontalPanel hp = new HorizontalPanel();
 		hp.setWidth("100%");

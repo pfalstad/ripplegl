@@ -21,7 +21,7 @@ h1 {
 
 /** Most GWT widgets already have a style name defined */
 .gwt-DialogBox {
-  width: 400px;
+/*  width: 400px;   this causes dialogs to not be centered properly */
 }
 
 .dialogVPanel {

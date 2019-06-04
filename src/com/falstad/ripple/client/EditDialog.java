@@ -164,13 +164,15 @@ class EditDialog extends DialogBox  {
 		if (ei.dimensionless)
 			return noCommaFormat.format(v);
 		if (v == 0) return "0";
+		if (va < 1e-12)
+			return noCommaFormat.format(v*1e15) + "f";
 		if (va < 1e-9)
 			return noCommaFormat.format(v*1e12) + "p";
 		if (va < 1e-6)
 			return noCommaFormat.format(v*1e9) + "n";
 		if (va < 1e-3)
 			return noCommaFormat.format(v*1e6) + "u";
-		if (va < 1e-2)
+		if (va < 1e-2 || (va < 1 && ei.noCenti))
 			return noCommaFormat.format(v*1e3) + "m";
 		if (va < 1)
 			return noCommaFormat.format(v*1e2) + "c";
@@ -194,6 +196,7 @@ class EditDialog extends DialogBox  {
 		char uc = s.charAt(len-1);
 		double mult = 1;
 		switch (uc) {
+		case 'f': case 'F': mult = 1e-15; break;
 		case 'p': case 'P': mult = 1e-12; break;
 		case 'n': case 'N': mult = 1e-9; break;
 		case 'u': case 'U': mult = 1e-6; break;

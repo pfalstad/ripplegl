@@ -22,6 +22,7 @@ package com.falstad.ripple.client;
 public class LineSource extends Source {
 
 	boolean gauss;
+	static int FLAG_GAUSS = 1;
 	
 	LineSource() {
 		handles.add(new DragHandle(this));
@@ -30,7 +31,7 @@ public class LineSource extends Source {
 	LineSource(StringTokenizer st) {
 		super(st, 2);
 		setTransform();
-		gauss = (flags & 1) != 0;
+		gauss = (flags & FLAG_GAUSS) != 0;
 	}
 	
 	LineSource(int x, int y, int x2, int y2) {
@@ -57,7 +58,7 @@ public class LineSource extends Source {
 	}
 
 	String dump() {
-		flags = (gauss) ? 1 : 0;
+		flags = (gauss) ? FLAG_GAUSS : 0;
 		return super.dump();
 	}
 	

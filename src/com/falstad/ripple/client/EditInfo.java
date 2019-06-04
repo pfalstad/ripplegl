@@ -43,6 +43,7 @@ class EditInfo {
 	}
 	
 	EditInfo setDimensionless() { dimensionless = true; return this; }
+	EditInfo setNoCenti() { noCenti = true; return this; }
 	
 	String name, text;
 	double value, minval, maxval;
@@ -56,5 +57,6 @@ class EditInfo {
 	boolean newDialog;
 	boolean forceLargeM;
 	boolean dimensionless;
+	boolean noCenti;
 }
     
