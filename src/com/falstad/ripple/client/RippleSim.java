@@ -219,7 +219,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	DialogBox dialogBox;
 	int verticalPanelWidth;
 	String startLayoutText = null;
-	String versionString = "1.1";
+	String versionString = "1.2";
     public static NumberFormat showFormat, shortFormat, noCommaFormat;
 	static RippleSim theSim;
     static EditDialog editDialog;
