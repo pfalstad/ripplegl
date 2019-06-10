@@ -54,6 +54,13 @@ public class Color
         this.b = b;
     }
 
+    public Color (double r, double g, double b)
+    {
+        this.r = (int)(r*255);
+        this.g = (int)(g*255);
+        this.b = (int)(b*255);
+    }
+
     public int getRed ()
     {
         return r;

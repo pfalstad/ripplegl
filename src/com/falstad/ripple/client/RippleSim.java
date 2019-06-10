@@ -32,6 +32,7 @@ import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.core.client.Duration;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.CanvasElement;
+import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
@@ -66,6 +67,7 @@ import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
 import com.google.gwt.user.client.Random;
 import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.AbsolutePanel;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
@@ -197,6 +199,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	static final int SWF_SIN = 0;
 	static final int SWF_SQUARE = 1;
 	static final int SWF_PULSE = 2;
+	
+	static final double timeStep = .25;
 
 //	Frame iFrame;
     LoadFile loadFileInput;
@@ -352,6 +356,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawWall(x1, y1, x2, y2);
 	}-*/;
 
+	static native double getProbeValue(int x, int y) /*-{
+		return this.getProbeValue(x, y);
+	}-*/;
+
+	
 	static native void clearWall(int x1, int y1, int x2, int y2) /*-{
 		this.clearWall(x1, y1, x2, y2);
 	}-*/;
@@ -372,6 +381,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawingSelection = ds;
 	}-*/;
 
+	static native void setDrawingColor(double r, double g, double b, double a) /*-{
+		this.drawingColor = [ r, g, b, a ];
+	}-*/;
+
+	
 	static native void setTransform(double a, double b, double c, double d, double e, double f) /*-{
 		this.setTransform(a, b, c, d, e, f);
 	}-*/;
@@ -400,6 +414,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.doBlankWalls();
 	}-*/;
 
+	static native boolean readPixelsWorks() /*-{
+		return this.readPixelsWorks;
+	}-*/;
+	
 	static native void setColors(int wallColor, int posColor, int negColor,
 			int zeroColor, int posMedColor, int negMedColor,
 			int medColor, int sourceColor, int zeroColor3d) /*-{
@@ -724,6 +742,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Ellipse Medium", "MediumEllipse"));
     	mainMenuBar.addItem(getClassCheckItem("Add Parabola", "Parabola"));
     	mainMenuBar.addItem(getClassCheckItem("Add Lens", "Lens"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Probe", "Probe"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
@@ -820,6 +839,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new Lens();
     	if (item == "Source")
     		newObject = new Source();
+    	if (item == "Probe") {
+    		if (!readPixelsWorks()) {
+    			Window.alert("Not supported in this browser.  Try Chrome.");
+    			return;
+    		}
+    		newObject = new Probe();
+    	}
     	if (item == "LineSource")
     		newObject = new LineSource();
     	if (item == "PhasedArraySource")
@@ -854,6 +880,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	if (tint == 'W') return new MovingWall(st);
     	if (tint == 200) return new MultipoleSource(st);
     	if (tint == 'p') return new Parabola(st);
+    	if (tint == 'P') return new Probe(st);
     	if (tint == 201) return new PhasedArraySource(st);
     	if (tint == 203) return new Slit(st);
     	if (tint == 202) return new SolidBox(st);
@@ -929,16 +956,15 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		setTransform(1, 0, 0, 0, 1, 0);
 	}
 
-	// draw mode boxes
-	void drawModes() {
+	// call reset() on objects after clearing waves
+	// used to draw mode boxes, reset probe data, etc
+	void reset() {
 		int i;
 		for (i = 0; i != dragObjects.size(); i++) {
 			DragObject obj = dragObjects.get(i);
-			if (obj instanceof ModeBox) {
-				double xform[] = obj.transform;
-				setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
-				((ModeBox) obj).drawMode();
-			}
+			double xform[] = obj.transform;
+			setTransform(xform[0], xform[1], xform[2], xform[3], xform[4], xform[5]);
+			obj.reset();
 		}
 		setTransform(1, 0, 0, 0, 1, 0);
 	}
@@ -955,7 +981,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			setAcoustic(waveChooser.getSelectedIndex() == WAVE_SOUND);
 			for (i = 0; i != iterCount; i++) {
 				simulate();
-				t += .25;
+				t += timeStep;
 				int j;
 				for (j = 0; j != dragObjects.size(); j++)
 					dragObjects.get(j).run();
@@ -966,6 +992,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			if (!view3dCheck.getState())
 				for (i = 0; i != dragObjects.size(); i++) {
 					DragObject obj = dragObjects.get(i);
+					setDrawingColor(1, 1, 0, .5);
 					if (obj.selected)
 						setDrawingSelection(.6+.4*Math.sin(t*.2));
 					else
@@ -1082,6 +1109,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void deleteAllObjects() {
+        for (int i = dragObjects.size()-1; i >= 0; i--) {
+        	DragObject ce = dragObjects.get(i);
+            ce.delete();
+        }
 		dragObjects.removeAllElements();
 		selectedObject = null;
 		doBlankWalls();
@@ -1369,6 +1400,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 					}
                     if (tint >= '0' && tint <= '9')
                         tint = new Integer(type).intValue();
+                    
+                    // ignore probes if we can't display them
+                    if (tint == 'P' && !readPixelsWorks())
+                    	break;
+                    
                     DragObject newobj = createObj(tint, st);
                     if (newobj==null) {
                     	console("unrecognized dump type: " + type);
@@ -1550,11 +1586,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         if (va < 1e9)
             return showFormat.format(v*1e-6) + " M" + u;
         if (va < 1e12)
-            return shortFormat.format(v*1e-9) + " G" + u;
+            return showFormat.format(v*1e-9) + " G" + u;
         if (va < 1e15)
-            return shortFormat.format(v*1e-12) + " T" + u;
+            return showFormat.format(v*1e-12) + " T" + u;
         if (va < 1e18)
-            return shortFormat.format(v*1e-15) + " P" + u;
+            return showFormat.format(v*1e-15) + " P" + u;
         return showFormat.format(v*1e-18) + " E" + u;
     }
     
@@ -1683,6 +1719,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		if (view3dCheck.getState())
 			return;
 
+		if (mouseObject != null)
+			mouseObject.mouseDown();
 		Point mp = getPointFromEvent(event);
 
 		if (draggingHandle == null) {
@@ -1696,7 +1734,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 //		console("onmd " + mouseObject + " " + preserveSelection + " " + draggingHandle);
 		
-		drawPoke(mp.x, mp.y);
+		if (mouseObject == null && event.getNativeButton() != NativeEvent.BUTTON_RIGHT)
+			drawPoke(mp.x, mp.y);
 	}
 	
 	void setSelectedObject(DragObject obj) {
@@ -1838,7 +1877,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		event.preventDefault();
 		if (event.getSource() == blankButton) {
 			doBlank();
-			drawModes();
+			reset();
 			resetTime();
 		}
 		

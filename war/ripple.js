@@ -179,9 +179,18 @@ var transform = [1, 0, 0, 1, 0, 0];
           return null;
         }
 
+	while(gl.getError() != gl.NO_ERROR) { }
+	var pixels = new Float32Array(4);
+	gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, pixels);
+	if (gl.getError() != gl.NO_ERROR)
+	    console.log("readPixels failed");
+	else
+	    sim.readPixelsWorks = true;
+
     	gl.bindTexture(gl.TEXTURE_2D, null);
     	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
     	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
     	return {framebuffer:rttFramebuffer, texture:rttTexture};
     }
 
@@ -423,7 +432,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     }
 
     function drawSelectedHandle(x, y) {
-       	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection, sim.drawingSelection, 0, 0.5);
+	gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection, sim.drawingSelection, 0, 0.5);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var cx = -1+2*(x+.5)/windowWidth;
@@ -549,8 +558,8 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     function setupForDrawing(v) {
         if (sim.drawingSelection > 0) {
-    		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingSelection,
-    				sim.drawingSelection, 0, 1.0);
+       		gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, sim.drawingColor[0]*sim.drawingSelection, sim.drawingColor[1]*sim.drawingSelection,
+				sim.drawingColor[2]*sim.drawingSelection, sim.drawingColor[3]);
         } else {
     		var rttFramebuffer = renderTexture1.framebuffer;
     		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
@@ -855,6 +864,16 @@ var transform = [1, 0, 0, 1, 0, 0];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
+    function getProbeValue(x, y) {
+    	var rttFramebuffer = renderTexture1.framebuffer;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+		var pixels = new Float32Array(4);
+		gl.readPixels(windowOffsetX+x, gridSizeY-windowOffsetY-y-1, 1, 1, gl.RGBA, gl.FLOAT, pixels);
+		return pixels[0];
+		//console.log("got pixel data " + pixels);
+	}
+
     function drawScene(bright) {
         gl.useProgram(shaderProgramMain);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -968,6 +987,7 @@ var transform = [1, 0, 0, 1, 0, 0];
 
     	gl.clearColor(0.0, 0.0, 1.0, 1.0);
 
+	sim.readPixelsWorks = false;
     	sim.acoustic = false;
     	sim.updateRipple = function updateRipple (bright) { drawScene(bright); }
     	sim.updateRipple3D = function updateRipple3D (bright) { drawScene3D(bright); }
@@ -992,6 +1012,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	sim.drawFocus = function (x, y) { drawFocus(x, y); }
     	sim.drawPoke = function (x, y) { drawPoke(x, y); }
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 0); }
+    	sim.getProbeValue = function (x, y) { return getProbeValue(x, y); }
     	sim.clearWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 1); }
     	sim.drawParabola = function (x, y, w, h) { drawParabola(x, y, w, h); }
     	sim.drawLens = function (x, y, w, h, m) { drawLens(x, y, w, h, m); }

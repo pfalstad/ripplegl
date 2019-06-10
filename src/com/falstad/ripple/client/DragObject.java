@@ -273,4 +273,7 @@ public abstract class DragObject implements Editable {
 		double len = Math.round(Math.hypot(dh1.x-dh2.x, dh1.y-dh2.y));
 		return len;
 	}
+	
+	void reset() {}
+	void mouseDown() {}
 }

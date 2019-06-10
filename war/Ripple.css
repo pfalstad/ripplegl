@@ -36,3 +36,63 @@ h1 {
 #closeButton {
   margin: 15px 6px 6px;
 }
+
+
+.gwt-extras-WindowBox .dialogMiddleCenter {
+  padding: 0px !important;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-container {
+  position: relative;  
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls {
+  position: absolute;
+  top: -22px;
+  right: 2px;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a {
+  cursor: pointer;
+  display: block;
+  height: 12px;
+  width: 12px;  
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-close {
+  background: transparent url(images/x-2panel.png) left top no-repeat;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-close:hover {
+  background: transparent url(images/x-2panel.png) right top no-repeat;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-minimize {
+  /*display: block;
+  height: 12px;
+  width: 12px;*/  
+  background: transparent url(images/min-4panel.png) left top no-repeat;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-minimize:hover {
+  /*display: block;
+  height: 12px;
+  width: 12px;*/  
+  background: transparent url(images/min-4panel.png) left top no-repeat;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-minimize:hover {
+  background: transparent url(images/min-4panel.png) right top no-repeat;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-maximize {
+  /*display: block;
+  height: 12px;
+  width: 12px;*/  
+  background: transparent url(images/min-4panel.png) left bottom no-repeat;
+}
+
+.gwt-extras-WindowBox .gwt-extras-dialog-controls a.gwt-extras-dialog-maximize:hover {
+  background: transparent url(images/min-4panel.png) right bottom no-repeat;
+}
+
