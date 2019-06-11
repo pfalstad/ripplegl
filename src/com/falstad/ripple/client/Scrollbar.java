@@ -1,5 +1,5 @@
 /*
-    Copyright (C) 2017 by Paul Falstad
+    Copyright (C) 2017 by Paul Falstad and Iain Sharp
 
     This file is part of RippleGL.
 
