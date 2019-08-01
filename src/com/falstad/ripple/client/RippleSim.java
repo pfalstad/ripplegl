@@ -425,6 +425,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			medColor, sourceColor, zeroColor3d);
 	}-*/;
 
+	static native void setDamping(double d) /*-{
+		this.setDamping(d);
+	}-*/;
+	
 	Frame iFrame;
 	
 	public void init() {
@@ -505,11 +509,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		verticalPanel.add(resBar = new Scrollbar(Scrollbar.HORIZONTAL, res, 5, 384, 1024));
 		resBar.addClickHandler(this);
 		setResolution();
-//		verticalPanel.add(new Label("Damping"));
-//		verticalPanel.add(
-				dampingBar = new Scrollbar(Scrollbar.HORIZONTAL, 10, 1, 2, 100);
-//						);
-		dampingBar.addClickHandler(this);
+		verticalPanel.add(l = new Label("Damping"));
+        l.addStyleName("topSpace");
+		verticalPanel.add(
+				dampingBar = new Scrollbar(Scrollbar.HORIZONTAL, 0, 0, 0, 100, new Command() {
+					public void execute() { setDamping(); }
+				}
+		));
 		verticalPanel.add(l = new Label("Source Frequency"));
         l.addStyleName("topSpace");
 		verticalPanel.add(freqBar = new Scrollbar(Scrollbar.HORIZONTAL, freqBarValue = 15, 1, 1, 30,
@@ -1033,11 +1039,10 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	}
 
 	void setDamping() {
-		/*
-		 * int i; double damper = dampingBar.getValue() * .00002;// was 5
-		 * dampcoef = Math.exp(-damper);
-		 */
-		dampcoef = 1;
+		double damper = dampingBar.getValue() * .0002;
+		dampcoef = Math.exp(-damper);
+		setDamping(dampcoef);
+		console("damp " + dampcoef + " " + dampingBar.getValue());
 	}
 
 	void setFreqBar(int x) {
@@ -1131,7 +1136,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 			setResolution(32);
 		doBlank();
 		deleteAllObjects();
-		dampingBar.setValue(10);
+		dampingBar.setValue(0);
 		setFreqBar(5);
 		setBrightness(10);
 		waveChooser.setSelectedIndex(1);
@@ -1332,7 +1337,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		String dump = "";
 
 		int i;
-		dump = "$ 1 " + windowWidth + " " + windowOffsetX + " " + dampingBar.getValue() + " " +
+		dump = "$ 3 " + windowWidth + " " + windowOffsetX + " " + dampingBar.getValue() + " " +
 				waveChooser.getSelectedIndex() + " " + brightnessBar.getValue() + " " + lengthScale + "\n";
 /*		for (i = 0; i != sourceCount; i++) {
 			OscSource src = sources[i];
@@ -1382,15 +1387,17 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 						if ((flags & 1) == 0)
 							return;
 
-//						dump = "$ 1 " + windowWidth + " " + windowOffsetX + " " +
-//								fixedEndsCheck.getState() + " " + brightnessBar.getValue() + "\n";
-
 						int ww = Integer.parseInt(st.nextToken());
 						int wo = Integer.parseInt(st.nextToken());
 						setResolution(ww, wo);
 						reinit(false);
 
-						dampingBar.setValue(Integer.parseInt(st.nextToken()));
+						int damp = Integer.parseInt(st.nextToken());
+						
+						// ignore damping values on old dumps
+						if ((flags & 2) != 0)
+							dampingBar.setValue(damp);
+						
 						waveChooser.setSelectedIndex(Integer.parseInt(st.nextToken()));
 						setWaveType();
 						brightnessBar.setValue(new Integer(st.nextToken())

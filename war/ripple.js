@@ -4,6 +4,7 @@ var canvas;
 var gridSizeX =1024, gridSizeY =1024, windowOffsetX =40, windowOffsetY =40;
 var windowWidth, windowHeight, viewAngle, viewHeight;
 var sim;
+var damping;
 var transform = [1, 0, 0, 1, 0, 0];
 
     function getShader(gl, id, prefix) {
@@ -322,10 +323,10 @@ var transform = [1, 0, 0, 1, 0, 0];
     		var yi = points[i*2+1];
     		simPosition.push(-1+2*xi/gridSizeX, -1+2*yi/gridSizeY);
     		simTextureCoord.push(xi/gridSizeX, yi/gridSizeY);
-    		var damp = 1;
+    		var damp = damping;
     		if (xi == 1 || yi == 1 || xi == gridSizeX-2 || yi == gridSizeY-2)
-    			damp = .999-8*.01; // was 20
-    			simDamping.push(damp);
+    			damp *= .999-8*.01; // was 20
+    		simDamping.push(damp);
     	}
     }
 
@@ -1062,7 +1063,11 @@ var transform = [1, 0, 0, 1, 0, 0];
 			var arg = arguments[i];
 			colors.push(((arg>>16)&0xff)/255, ((arg>>8)&0xff)/255, (arg&0xff)/255);
 		}
-	}
+    }
+    sim.setDamping = function (d) {
+        damping = d;
+        initBuffers();
+    }
 	sim.drawingSelection = -1;
     mat4.identity(pMatrix);
     mat4.identity(mvMatrix);
