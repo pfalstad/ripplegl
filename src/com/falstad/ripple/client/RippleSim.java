@@ -607,23 +607,23 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	
 	void createMenus() {
 		  fileMenuBar = new MenuBar(true);
-		  importFromLocalFileItem = new MenuItem("Import From Local File", new MyCommand("file","importfromlocalfile"));
+		  importFromLocalFileItem = new MenuItem("Open File...", new MyCommand("file","importfromlocalfile"));
 		  importFromLocalFileItem.setEnabled(LoadFile.isSupported());
 		  fileMenuBar.addItem(importFromLocalFileItem);
-		  importFromTextItem = new MenuItem("Import From Text", new MyCommand("file","importfromtext"));
+		  importFromTextItem = new MenuItem("Import From Text...", new MyCommand("file","importfromtext"));
 		  fileMenuBar.addItem(importFromTextItem);
 //		  importFromDropboxItem = new MenuItem("Import From Dropbox", new MyCommand("file", "importfromdropbox"));
 //		  fileMenuBar.addItem(importFromDropboxItem); 
-		  exportAsUrlItem = new MenuItem("Export As Link", new MyCommand("file","exportasurl"));
+		  exportAsUrlItem = new MenuItem("Export As Link...", new MyCommand("file","exportasurl"));
 		  fileMenuBar.addItem(exportAsUrlItem);
-		  exportAsLocalFileItem = new MenuItem("Export As Local File", new MyCommand("file","exportaslocalfile"));
+		  exportAsLocalFileItem = new MenuItem("Save As...", new MyCommand("file","exportaslocalfile"));
 		  exportAsLocalFileItem.setEnabled(ExportAsLocalFileDialog.downloadIsSupported());
 		  fileMenuBar.addItem(exportAsLocalFileItem);
-		  exportAsTextItem = new MenuItem("Export As Text", new MyCommand("file","exportastext"));
+		  exportAsTextItem = new MenuItem("Export As Text...", new MyCommand("file","exportastext"));
 		  fileMenuBar.addItem(exportAsTextItem);
 		  fileMenuBar.addItem(getClassCheckItem("Options...", "Options"));
 		  fileMenuBar.addSeparator();
-		  aboutItem=new MenuItem("About",(Command)null);
+		  aboutItem=new MenuItem("About...",(Command)null);
 		  fileMenuBar.addItem(aboutItem);
 		  aboutItem.setScheduledCommand(new MyCommand("file","about"));
 		  
