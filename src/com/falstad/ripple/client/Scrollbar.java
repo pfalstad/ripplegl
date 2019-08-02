@@ -38,15 +38,25 @@ import com.google.gwt.event.dom.client.MouseOutHandler;
 import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.user.client.Command;
+import com.google.gwt.user.client.Event;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.dom.client.Touch;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
+import com.google.gwt.event.dom.client.TouchCancelEvent;
+import com.google.gwt.event.dom.client.TouchCancelHandler;
+import com.google.gwt.event.dom.client.TouchEndEvent;
+import com.google.gwt.event.dom.client.TouchEndHandler;
+import com.google.gwt.event.dom.client.TouchMoveEvent;
+import com.google.gwt.event.dom.client.TouchMoveHandler;
+import com.google.gwt.event.dom.client.TouchStartEvent;
+import com.google.gwt.event.dom.client.TouchStartHandler;
 import com.google.gwt.event.shared.HandlerRegistration;
 
 
 public class Scrollbar extends  Composite implements 
 	ClickHandler, MouseDownHandler, MouseMoveHandler, MouseUpHandler, MouseOutHandler, MouseOverHandler,
-	MouseWheelHandler, HasClickHandlers {
+	MouseWheelHandler, TouchStartHandler, TouchCancelHandler, TouchEndHandler, TouchMoveHandler, HasClickHandlers {
 	
 //	static final int width=166;
 	
@@ -89,6 +99,13 @@ public class Scrollbar extends  Composite implements
 		can.addMouseOutHandler(this);
 		can.addMouseOverHandler(this);
 		can.addMouseWheelHandler(this);
+		
+		// our hack from CirSim doesn't work here so we have to handle touch events explicitly
+		can.addTouchStartHandler(this);
+		can.addTouchMoveHandler(this);
+		can.addTouchEndHandler(this);
+		can.addTouchCancelHandler(this);
+		
 		this.draw();
 		initWidget(pan);
 	}
@@ -113,6 +130,10 @@ public class Scrollbar extends  Composite implements
 	}
 	
 	void draw() {
+		g.setFont("15px sans-serif");
+		String valStr = String.valueOf(val);
+		int tw = (int)g.measureText(valStr).getWidth();
+		
 		g.setFillStyle("#ffffff");
 		if (enabled)
 			g.setStrokeStyle("#000000");
@@ -132,8 +153,10 @@ public class Scrollbar extends  Composite implements
 			g.setStrokeStyle("grey");
 		g.beginPath();
 		g.setLineWidth(5.0);
-		g.moveTo(HMARGIN+SCROLLHEIGHT+BARMARGIN, SCROLLHEIGHT/2);
-		g.lineTo(width-HMARGIN-SCROLLHEIGHT-BARMARGIN, SCROLLHEIGHT/2);
+		int rmargin = (val > (max*3+min)/4) ? 0 : tw;
+		int lmargin = tw-rmargin;
+		g.moveTo(HMARGIN+SCROLLHEIGHT+BARMARGIN+lmargin, SCROLLHEIGHT/2);
+		g.lineTo(width-HMARGIN-SCROLLHEIGHT-BARMARGIN-rmargin, SCROLLHEIGHT/2);
 		g.stroke();
 		double p=HMARGIN+SCROLLHEIGHT+BARMARGIN+((width-2*(HMARGIN+SCROLLHEIGHT+BARMARGIN))*((double)(val-min)))/(max-min);
 		if (enabled) {
@@ -142,7 +165,7 @@ public class Scrollbar extends  Composite implements
 //			else
 				g.setStrokeStyle("red");
 			g.beginPath();
-			g.moveTo(HMARGIN+SCROLLHEIGHT+BARMARGIN, SCROLLHEIGHT/2);
+			g.moveTo(HMARGIN+SCROLLHEIGHT+BARMARGIN+lmargin, SCROLLHEIGHT/2);
 			g.lineTo(p, SCROLLHEIGHT/2);
 			g.stroke();
 			g.setStrokeStyle("#000000");
@@ -155,6 +178,10 @@ public class Scrollbar extends  Composite implements
 //			g.stroke();
 		}
 
+		g.setTextBaseline("middle");
+		g.setFillStyle("#000000");
+		int x = (rmargin == 0) ? HMARGIN+SCROLLHEIGHT : width-SCROLLHEIGHT-HMARGIN-tw;
+		g.fillText(valStr, x, SCROLLHEIGHT/2);
 
 		
 	}
@@ -173,43 +200,57 @@ public class Scrollbar extends  Composite implements
 //		GWT.log("Down");
 		dragging=false;
 		e.preventDefault();
-		if (enabled){
-			if (e.getX()<HMARGIN+SCROLLHEIGHT ) {
-				if (val>min)
-					val--;
-			}
-			else {
-				if (e.getX()>width-HMARGIN-SCROLLHEIGHT ) {
-					if (val<max)
-						val++;
-				}
-				else {
-					val=calcValueFromPos(e.getX());	
-					dragging=true;}
-			}
-			draw();
-			if (command!=null)
-				command.execute();
+		doMouseDown(e.getX(), true);
+	}
+	
+	void doMouseDown(int x, boolean mouse) {
+	    if (enabled){
+		if (x < HMARGIN+SCROLLHEIGHT ) {
+		    if (val>min)
+			val--;
 		}
-		
+		else {
+		    if (x > width-HMARGIN-SCROLLHEIGHT ) {
+			if (val<max)
+			    val++;
+		    }
+		    else {
+			val=calcValueFromPos(x);	
+			dragging=true;
+			
+			// setCapture doesn't work on touch for some reason; touchend/touchmoved events
+			// don't get sent
+			if (mouse)
+			    Event.setCapture(can.getElement());
+		    }
+		}
+		draw();
+		if (command!=null)
+		    command.execute();
+	    }
 	}
 	
 	public void onMouseMove(MouseMoveEvent e){
 //		GWT.log("Move");
 		e.preventDefault();
-		if (enabled) {
-			if (dragging) {
-				val=calcValueFromPos(e.getX());	
-				draw();
-				if (command!=null)
-					command.execute();
-			}
+		doMouseMove(e.getX());
+	}
+	
+	void doMouseMove(int x) {
+	    if (enabled) {
+		if (dragging) {
+		    val=calcValueFromPos(x);	
+		    draw();
+		    if (command!=null)
+			command.execute();
 		}
+	    }
 	}
 	
 	public void onMouseUp(MouseUpEvent e){
 //		GWT.log("Up");
 		e.preventDefault();
+		Event.releaseCapture(can.getElement());
 		if (enabled && dragging) {
 			val=calcValueFromPos(e.getX());	
 			dragging=false;
@@ -224,14 +265,8 @@ public class Scrollbar extends  Composite implements
 //		e.preventDefault();
 //		if (enabled && attachedElm!=null && attachedElm.isMouseElm())
 //			CircuitElm.sim.setMouseElm(null);
-		if (enabled && dragging) {
-			val=calcValueFromPos(e.getX());	
-			dragging=false;
-			draw();
-			if (command!=null)
-				command.execute();
-		}
-
+		if (dragging)
+			return;
 	}
 	
 	public void onMouseOver(MouseOverEvent e){
@@ -291,6 +326,38 @@ public class Scrollbar extends  Composite implements
 		draw();
 	}
 
+	public void onTouchMove(TouchMoveEvent e) {
+//	    GWT.log("touchmove");
+	    e.preventDefault();
+	    Touch t = e.getTouches().get(0);
+	    doMouseMove(t.getRelativeX(getElement()));
+	}
+
+	public void onTouchEnd(TouchEndEvent event) {
+//	    GWT.log("touchend");;
+	    event.preventDefault();
+	    if (enabled && dragging) {
+		dragging=false;
+		draw();
+		if (command!=null)
+		    command.execute();
+	    }
+	}
+
+	public void onTouchCancel(TouchCancelEvent event) {
+//	    GWT.log("touchcancel");;
+	    event.preventDefault();
+	    dragging = false;
+	}
+
+	public void onTouchStart(TouchStartEvent event) {
+//	    GWT.log("touchstart");
+	    event.preventDefault();
+	    dragging=false;
+	    Touch t = event.getTouches().get(0);
+	    doMouseDown(t.getRelativeX(getElement()), false);
+	}
+	
 	@Override
 	public HandlerRegistration addClickHandler(ClickHandler handler) {
 		 return addDomHandler(handler, ClickEvent.getType());
