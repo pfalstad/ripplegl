@@ -23,6 +23,7 @@ public class Source extends DragObject {
     static final int WF_SINE = 0;
     static final int WF_PULSE = 1;
     static final int WF_PACKET = 2;
+    static final int WF_TRIANGLE = 3;
     static final int FLAG_STRENGTH = 2; 
     int waveform;
     double frequency, phaseShift, freqTimeZero;
@@ -92,14 +93,32 @@ public class Source extends DragObject {
 			freqTimeZero = 0;
 	}
 	
+    double triangleFunc(double x) {
+    	final double pi = Math.PI;
+    	
+    	// match phase of default cosine
+    	x += pi;
+    	
+    	x %= 2*pi;
+        if (x < pi)
+            return x*(2/pi)-1;
+        return 1-(x-pi)*(2/pi);
+    }
+
+    boolean isSimpleWaveform() {
+    	return waveform == WF_SINE || waveform == WF_TRIANGLE;
+    }
+    
 	double getValue() {
 		enabled = true;
 		double t = sim.t-startDelay;
 		if (t < 0)
 			return 0;
-		if (waveform == WF_SINE) {
+		if (isSimpleWaveform()) {
 			double freq = frequency; // sim.freqBar.getValue() * RippleSim.freqMult;
 			double w = freq * (t - freqTimeZero) + phaseShift;
+			if (waveform == WF_TRIANGLE)
+				return triangleFunc(w)*strength;
 			return Math.cos(w)*strength;
 		}
 		double w = t % (length + delay);
@@ -136,6 +155,7 @@ public class Source extends DragObject {
     		ei.choice.add("Sine");
     		ei.choice.add("Pulse");
     		ei.choice.add("Packet");
+    		ei.choice.add("Triangle");
     		ei.choice.select(waveform);
     		return ei;
     	}
@@ -143,7 +163,7 @@ public class Source extends DragObject {
     		return new EditInfo("Strength", strength, 0, 1).setDimensionless();
     	if (n == 2)
     		return new EditInfo("Start Delay (s)", sim.timeToRealTime(startDelay), 0, 1).setNoCenti();
-    	if (waveform == WF_SINE) {
+    	if (isSimpleWaveform()) {
     		if (n == 3)
     			return frequencyEditInfo = new EditInfo("Frequency (Hz)", getRealFrequency(), 4, 500);
     		if (n == 4)
@@ -157,7 +177,7 @@ public class Source extends DragObject {
     		if (waveform == WF_PACKET && n == 5)
     			return frequencyEditInfo = new EditInfo("Frequency (Hz)", getRealFrequency(), 4, 500);
     	}
-    	if ((waveform == WF_SINE && n == 5) || (waveform == WF_PACKET && n == 6))
+    	if ((isSimpleWaveform() && n == 5) || (waveform == WF_PACKET && n == 6))
     		return wavelengthEditInfo = new EditInfo("Wavelength (m)", getWavelength(), 4, 500);
     	return null;
     }
@@ -175,7 +195,7 @@ public class Source extends DragObject {
     		strength = ei.value;
     	if (n == 2)
     		startDelay = sim.realTimeToTime(ei.value);
-		if ((waveform == WF_SINE && n == 3) || (waveform == WF_PACKET && n == 5)) {
+		if ((isSimpleWaveform() && n == 3) || (waveform == WF_PACKET && n == 5)) {
 			// adjust time zero to maintain continuity in the waveform
 			// even though the frequency has changed.
 			double oldfreq = frequency;
@@ -189,7 +209,7 @@ public class Source extends DragObject {
 			wavelengthEditInfo.value = getWavelength();
 			EditDialog.theEditDialog.updateValue(wavelengthEditInfo);
 		}
-    	if (waveform == WF_SINE) {
+    	if (isSimpleWaveform()) {
     		if (n == 4)
     			phaseShift = ei.value*Math.PI/180;
     	} else {
@@ -198,7 +218,7 @@ public class Source extends DragObject {
     		if (n == 4)
     			delay = sim.realTimeToTime(ei.value);
     	}
-    	if ((waveform == WF_SINE && n == 5) || (waveform == WF_PACKET && n == 6)) {
+    	if ((isSimpleWaveform() && n == 5) || (waveform == WF_PACKET && n == 6)) {
     		// set wavelength
     		frequency = freqScale * sim.lengthScale /ei.value;
     		enforceMaxFrequency();
@@ -230,7 +250,7 @@ public class Source extends DragObject {
 	int getDumpType() { return 's'; }
 	
 	String selectText() {
-		if (waveform != WF_SINE)
+		if (!isSimpleWaveform())
 			return null;
 		return RippleSim.getUnitText(getRealFrequency(), "Hz") + ", \u03bb = " +
 			sim.getUnitText(getWavelength(), "m");
