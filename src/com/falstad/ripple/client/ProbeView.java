@@ -22,26 +22,36 @@ package com.falstad.ripple.client;
 import java.util.Date;
 import com.google.gwt.user.client.ui.DialogBox;
 import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.ui.Anchor;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.ContextMenuEvent;
+import com.google.gwt.event.dom.client.ContextMenuHandler;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.MenuBar;
+import com.google.gwt.user.client.ui.MenuItem;
+import com.google.gwt.user.client.ui.PopupPanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.RichTextArea;
 import com.google.gwt.user.client.ui.RootLayoutPanel;
 import com.google.gwt.i18n.client.DateTimeFormat;
 
-public class ProbeView extends WindowBox {
+public class ProbeView extends WindowBox implements ContextMenuHandler {
 	
 	Canvas cv;
 	double values[], maxValue;
 	int offset;
 	Font font;
 	Color color;
+	MenuBar popupMenu;
+	MenuItem startRecordingItem, stopRecordingItem, saveRecordingItem;
+	boolean recording;
+	StringBuffer recordingBuffer;
 	
 	public ProbeView(int n, Color col, boolean showing) {
 		super(false, false, true, true);
@@ -59,6 +69,10 @@ public class ProbeView extends WindowBox {
 		color = col;
 		
 		setText("Probe View " + (n+1));
+		
+		createPopupMenu();
+		cv.addDomHandler(this, ContextMenuEvent.getType());
+		
 		/*
 		vp=new VerticalPanel();
 		setWidget(vp);
@@ -84,6 +98,13 @@ public class ProbeView extends WindowBox {
 		setPopupPosition(x, y);
 		setVisible(showing);
 		show();
+	}
+	
+	void createPopupMenu() {
+        popupMenu = new MenuBar(true);
+        popupMenu.addItem(startRecordingItem = new MenuItem("Start Recording", new ProbeCommand("start")));
+        popupMenu.addItem(stopRecordingItem = new MenuItem("Stop Recording", new ProbeCommand("stop")));
+        popupMenu.addItem(saveRecordingItem = new MenuItem("Save Recording...", new ProbeCommand("save")));
 	}
 	
 	void draw() {
@@ -116,6 +137,10 @@ public class ProbeView extends WindowBox {
 //		maxValue = Math.max(Math.abs(x), maxValue*.999);
 		if (offset >= values.length)
 			offset = 0;
+		if (recording) {
+			recordingBuffer.append(String.valueOf(x*1000));
+			recordingBuffer.append('\n');
+		}
 	}
 	
 	void reset() {
@@ -182,10 +207,106 @@ public class ProbeView extends WindowBox {
         // don't show freq if standard deviation is too great
         if (periodct < 1 || periodstd > 20)
             freq = 0;
-         RippleSim.console(freq + " " + periodstd + " " + periodct);
+//         RippleSim.console(freq + " " + periodstd + " " + periodct);
          g.setFont(font);
          g.drawString(RippleSim.showFormat.format(maxValue*1000), 2, 13);
          if (freq != 0)
             g.drawString(RippleSim.getUnitText(freq, "Hz"), 2, 33);
-    }    
+    }
+    
+    PopupPanel contextPanel = null;
+
+    public void onContextMenu(ContextMenuEvent e) {
+    	startRecordingItem.setEnabled(!recording);
+    	stopRecordingItem.setEnabled(recording);
+    	saveRecordingItem.setEnabled(recordingBuffer != null);
+    	e.preventDefault();
+    	int menuX = e.getNativeEvent().getClientX() - getPopupLeft();
+    	int menuY = e.getNativeEvent().getClientY() - getPopupTop();
+        contextPanel=new PopupPanel(true);
+        contextPanel.add(popupMenu);
+        int x=Math.max(0, Math.min(menuX, cv.getCoordinateSpaceWidth()-50));
+        int y=Math.max(0, Math.min(menuY,cv.getCoordinateSpaceHeight()-50));
+        contextPanel.setPopupPosition(x + getPopupLeft(),y + getPopupTop());
+        contextPanel.show();
+    }
+    
+    class ProbeCommand implements Command {
+    	String name;
+    	public ProbeCommand(String n) {
+    		name = n;
+    	}
+    	public void execute() {
+    		menuPerformed(name);
+    	}
+    }
+    
+    void menuPerformed(String name) {
+    	if (contextPanel != null)
+    		contextPanel.hide();
+    	if (name == "start") {
+    		recording = true;
+    		recordingBuffer = new StringBuffer();
+    	}
+    	if (name == "stop")
+    		recording = false;
+    	if (name == "save") {
+    		DialogBox dlg = new SaveRecordingBufferDialog(recordingBuffer.toString());
+    		dlg.show();
+    	}
+    }
+}
+
+class SaveRecordingBufferDialog extends DialogBox {
+	
+    	VerticalPanel vp;
+	
+    	static public final native boolean downloadIsSupported() 
+	/*-{
+		return !!(("download" in $doc.createElement("a")));
+	 }-*/;
+	
+	static public final native String getBlobUrl(String data) 
+	/*-{
+		var datain=[""];
+		datain[0]=data;
+		var oldblob = $doc.exportBlob;
+		if (oldblob)
+		    URL.revokeObjectURL(oldblob);
+		var blob=new Blob(datain, {type: 'text/plain' } );
+		var url = URL.createObjectURL(blob);
+		$doc.exportBlob = url;
+		return url;
+	}-*/;
+	
+	public SaveRecordingBufferDialog(String data) {
+		super();
+		Button okButton;
+		Anchor a;
+		String url;
+		vp=new VerticalPanel();
+		setWidget(vp);
+		setText("Export as Local File");
+		vp.add(new Label("Click on the link below to save your data"));
+		url=getBlobUrl(data);
+		Date date = new Date();
+		DateTimeFormat dtf = DateTimeFormat.getFormat("yyyyMMdd-HHmm");
+		String fname = "ripple-"+ dtf.format(date) + ".txt";
+		a=new Anchor(fname, url);
+		a.getElement().setAttribute("Download", fname);
+		vp.add(a);
+		vp.add(okButton = new Button("OK"));
+		okButton.addClickHandler(new ClickHandler() {
+			public void onClick(ClickEvent event) {
+				closeDialog();
+			}
+		});
+		this.center();
+	}
+	
+	protected void closeDialog()
+	{
+		this.hide();
+	}
+
 }
