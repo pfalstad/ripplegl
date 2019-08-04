@@ -149,8 +149,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	int sourceIndex;
 	int freqBarValue;
 	boolean dragging;
-	boolean dragClear;
-	boolean dragSet;
+	boolean dragStop;
 	public boolean useFrame;
 	boolean showControls;
 	boolean changedWalls;
@@ -191,7 +190,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	Color wallColor, posColor, negColor, zeroColor, medColor, posMedColor,
 			negMedColor, sourceColor;
 	Color schemeColors[][];
-	Point dragPoint;
+	Point dragPoint, pokePoint;
+	double pokeValue;
 	// Method timerMethod;
 	int timerDiv;
 	static final int mediumMax = 191;
@@ -340,8 +340,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		this.drawFocus(x, y);
 	}-*/;
 
-	static native void drawPoke(int x, int y) /*-{
-		this.drawPoke(x, y);
+	static native void drawPoke(int x, int y, double value) /*-{
+		this.drawPoke(x, y, value);
 	}-*/;
 
 	static native void drawLineSource(int x1, int y1, int x2, int y2, double value, boolean gauss) /*-{
@@ -981,7 +981,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				changedWalls = false;
 			}
 			int iterCount = speedBar.getValue();
-			if (stoppedCheck.getState())
+			if (stoppedCheck.getState() || dragStop)
 				iterCount = 0;
 			int i;
 			setAcoustic(waveChooser.getSelectedIndex() == WAVE_SOUND);
@@ -992,6 +992,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				for (j = 0; j != dragObjects.size(); j++)
 					dragObjects.get(j).run();
 				iters++;
+				if (pokePoint != null)
+					drawPoke(pokePoint.x, pokePoint.y, pokeValue);
 			}
 			brightMult = Math.exp(brightnessBar.getValue() / 100. - 5.);
 			updateRippleGL(brightMult, view3dCheck.getState());
@@ -1479,7 +1481,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		if ((e.getModifiers() & MouseEvent.BUTTON1_MASK) == 0)
 //		    return;
 		dragging = false;
-		dragSet = dragClear = false;
+		dragStop = false;
+		pokePoint = null;
 		if (mouseObject == null)
 			preserveSelection = false;
 	}
@@ -1664,8 +1667,11 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 				dragPoint = pt;
 				changedWalls = true;
 			}
-		} else
-			drawPoke(pt.x, pt.y);
+		} else {
+			if (pokePoint != null)
+				pokePoint = pt;
+			drawPoke(pt.x, pt.y, pokeValue);
+		}
 	}
 
 	boolean isSelection() {
@@ -1741,8 +1747,14 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		}
 //		console("onmd " + mouseObject + " " + preserveSelection + " " + draggingHandle);
 		
-		if (mouseObject == null && event.getNativeButton() != NativeEvent.BUTTON_RIGHT)
-			drawPoke(mp.x, mp.y);
+		if (mouseObject == null && event.getNativeButton() != NativeEvent.BUTTON_RIGHT) {
+			pokeValue = event.isShiftKeyDown() ? -1 : 1;
+			if (event.isMetaKeyDown() || event.isControlKeyDown())
+				dragStop = true;
+			else
+				pokePoint = mp;
+			drawPoke(mp.x, mp.y, pokeValue);
+		}
 	}
 	
 	void setSelectedObject(DragObject obj) {
@@ -1780,7 +1792,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	@Override
 	public void onMouseOut(MouseOutEvent event) {
 		dragging = false;
-		dragSet = dragClear = false;
+		dragStop = false;
+		pokePoint = null;
 		mouseLocation = null;
 	}
 

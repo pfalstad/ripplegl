@@ -615,7 +615,7 @@ var transform = [1, 0, 0, 1, 0, 0];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    function drawPoke(x, y) {
+    function drawPoke(x, y, v) {
 		var rttFramebuffer = renderTexture1.framebuffer;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
 		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
@@ -626,7 +626,7 @@ var transform = [1, 0, 0, 1, 0, 0];
 
         gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
         var verts = [x, y];
-        var colors = [1,0,0,1];
+        var colors = [v,0,0,1];
         var steps = 8;
         var i;
         var r = 6;
@@ -1011,7 +1011,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     	sim.drawPhasedArray = function (x, y, x2, y2, f1, f2) { drawPhasedArray(x, y, x2, y2, f1, f2); }
     	sim.drawHandle = function (x, y) { drawHandle(x, y); }
     	sim.drawFocus = function (x, y) { drawFocus(x, y); }
-    	sim.drawPoke = function (x, y) { drawPoke(x, y); }
+    	sim.drawPoke = function (x, y, v) { drawPoke(x, y, v); }
     	sim.drawWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 0); }
     	sim.getProbeValue = function (x, y) { return getProbeValue(x, y); }
     	sim.clearWall = function (x, y, x2, y2) { drawWall(x, y, x2, y2, 1); }
