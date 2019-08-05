@@ -19,8 +19,11 @@
 
 package com.falstad.ripple.client;
 
+import com.google.gwt.user.client.Window;
+
 public class MovingWall extends RectDragObject {
 
+	boolean complained;
 	int moveDuration, pauseDuration;
 	int startIter;
 	int phase;
@@ -42,6 +45,16 @@ public class MovingWall extends RectDragObject {
 	String dump() { return super.dump() + " " + moveDuration + " " + pauseDuration; }
 	
 	void run() {
+		if (sim.waveChooser.getSelectedIndex() == RippleSim.WAVE_SOUND) {
+			// Moving walls cause the simulation to become unstable when using acoustic wave simulation.  When a wall moves, it leaves behind a cell
+			// with zero displacement, which is not right; it should use the value of the adjacent cell.  We would need to write a shader to clean this up
+			// and set an appropriate displacement for those cells, using acoustic boundary conditions.
+			if (!complained) {
+				Window.alert("Moving walls are not supported for acoustic waves.");
+				complained = true;
+			}
+			sim.iters = startIter;
+		}
         if (sim.iters < startIter)
         	startIter = sim.iters;
 		

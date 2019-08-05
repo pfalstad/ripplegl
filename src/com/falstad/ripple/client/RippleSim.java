@@ -831,8 +831,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new Ellipse();
     	if (item == "SolidBox")
     		newObject = new SolidBox();
-    	if (item == "MovingWall")
+    	if (item == "MovingWall") {
+			if (waveChooser.getSelectedIndex() == WAVE_SOUND) {
+				Window.alert("Moving walls are not supported for acoustic waves.");
+    			return;
+    		}
     		newObject = new MovingWall();
+    	}
     	if (item == "MovingSource")
     		newObject = new MovingSource();
     	if (item == "ModeBox")
