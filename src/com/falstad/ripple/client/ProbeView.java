@@ -121,12 +121,14 @@ public class ProbeView extends WindowBox implements ContextMenuHandler {
         cv.setCoordinateSpaceHeight(height);
 		g.setColor(Color.white);
         g.fillRect(0, 0, g.context.getCanvas().getWidth(), g.context.getCanvas().getHeight());
+        g.setColor("#ccc");
+        g.drawLine(0, height/2, width, height/2);
 		g.setColor(color);
 		context.beginPath();
 		int i;
 		context.moveTo(-10, height/2);
 		for (i = 0; i != values.length; i++) {
-			context.lineTo(i, height*(.5+.47*values[(i+offset) % values.length]/maxValue));
+			context.lineTo(i, height*(.5-.47*values[(i+offset) % values.length]/maxValue));
 		}
 		context.stroke();
 		drawFrequency(g);
