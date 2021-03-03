@@ -155,6 +155,8 @@ public abstract class RectDragObject extends DragObject {
 	}
 
 	String selectText() {
-		return "" + sim.getLengthText(width()) + " x " + sim.getLengthText(height());
+	    // report size of inside of ModeBox or Cavity since that is more relevant
+	    int adj = (this instanceof ModeBox || this instanceof Cavity) ? 2 : 0;
+	    return "" + sim.getLengthText(width()-adj) + " x " + sim.getLengthText(height()-adj);
 	}
 }

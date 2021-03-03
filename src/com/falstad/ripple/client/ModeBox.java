@@ -114,9 +114,11 @@ public class ModeBox extends RectDragObject {
     }
 	String dump() { return super.dump() + " " + xmode + " " + ymode + " " + randomize + " " + box; }
 	
-	String selectText() { return super.selectText() + ", f = " +
-			RippleSim.getUnitText(sim.waveSpeed/2 * Math.hypot(xmode/(sim.lengthScale*(width()-1)),
-						ymode/(sim.lengthScale*(height()-1))), "Hz");
+	String selectText() {
+	    // calculate mode frequency using dimensions of inside of box
+	    return super.selectText() + ", f = " +
+			RippleSim.getUnitText(sim.waveSpeed/2 * Math.hypot(xmode/(sim.lengthScale*(width()-2)),
+						ymode/(sim.lengthScale*(height()-2))), "Hz");
 	}
 	int getDumpType() { return 'M'; }
 	
