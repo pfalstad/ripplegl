@@ -218,7 +218,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 	HandlerRegistration handler;
 	DialogBox dialogBox;
 	int verticalPanelWidth;
-	String startLayoutText = null;
+	String startExampleText = null;
+	String startExample = null;
 	String versionString = "1.3";
     public static NumberFormat showFormat, shortFormat, noCommaFormat;
 	static RippleSim theSim;
@@ -436,12 +437,15 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 //		logger.log(Level.SEVERE, "RAwr");
 		
         QueryParameters qp = new QueryParameters();
+        String colors = null;
         
         try {
                 // look for layout embedded in URL
                 String cct=qp.getValue("rol");
                 if (cct!=null)
-                	startLayoutText = cct.replace("%24", "$");
+                    startExampleText = cct.replace("%24", "$");
+                startExample = qp.getValue("startExample");
+                colors = qp.getValue("colorScheme");
         } catch (Exception e) { }
 
 		cv = Canvas.createIfSupported();
@@ -577,9 +581,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
         showFormat=NumberFormat.getFormat("####.##");
         shortFormat=NumberFormat.getFormat("####.#");
         
-		schemeColors = new Color[20][8];
+		schemeColors = new Color[20][9];
 		if (colorChooser.getItemCount() == 0)
 		    addDefaultColorScheme();
+		if (colors != null) {
+		    decodeColorScheme(colors);
+		    colorChooser.select(colorChooser.getItemCount()-1);
+		}
 		doColor();
 		setWaveType();
 		setDamping();
@@ -1190,12 +1198,13 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 		int i;
 
 		for (i = 0; i != 7; i++)
-			decodeColorScheme(i, schemes[i]);
+			decodeColorScheme(schemes[i]);
 		// colorChooser.hide();
 	}
 
-	void decodeColorScheme(int cn, String s) {
-		StringTokenizer st = new StringTokenizer(s);
+	void decodeColorScheme(String s) {
+		StringTokenizer st = new StringTokenizer(s, " \t\n,");
+		int cn = colorChooser.getItemCount();
 		while (st.hasMoreTokens()) {
 			int i;
 			for (i = 0; i != 8; i++)
@@ -1255,10 +1264,12 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 					if (response.getStatusCode()==Response.SC_OK) {
 					String text = response.getText();
 					processSetupList(text.getBytes(), text.getBytes().length);
-					if (startLayoutText == null)
+					if (startExampleText != null)
+						readImport(startExampleText);
+					else if (startExample != null) {
+					    	readSetupFile(startExample, null);
+					} else
 						doSetup();
-					else
-						readImport(startLayoutText);
 					// end of processing
 					}
 					else 
