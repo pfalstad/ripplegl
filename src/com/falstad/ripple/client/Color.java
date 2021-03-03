@@ -114,6 +114,8 @@ public class Color
     }
     
     public static Color hex2Rgb(String colorStr) {
+	if (!colorStr.startsWith("#"))
+	    colorStr = "#" + colorStr;
     	if(colorStr.length()>8){
     		return new Color(
                 Integer.valueOf( colorStr.substring( 3, 5 ), 16 ),
