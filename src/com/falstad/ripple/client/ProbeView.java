@@ -180,8 +180,11 @@ public class ProbeView extends WindowBox implements ContextMenuHandler {
         int periodct = -1;
         double avperiod2 = 0;
         // count period lengths
+        double lastq = 0;
         for (i = 0; i != values.length; i++) {
             double q = values[(i+offset) % values.length]-avg;
+            // low-pass filter
+            lastq = q = .9*lastq + .1*q;
             
             int os = state;
             if (q < thresh)
