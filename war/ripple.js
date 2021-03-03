@@ -200,8 +200,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	gl.deleteFramebuffer(rt.framebuffer);
     }
 
-    var laptopScreenVertexPositionBuffer;
-    var laptopScreenVertexTextureCoordBuffer;
+    var vertexPositionBuffer;
+    var vertexTextureCoordBuffer;
     var screen3DTextureBuffer;
     var simVertexPositionBuffer;
     var simVertexTextureCoordBuffer;
@@ -218,9 +218,9 @@ var transform = [1, 0, 0, 1, 0, 0];
     var gridRange;
 
     function initBuffers() {
-    	if (!laptopScreenVertexPositionBuffer)
-    		laptopScreenVertexPositionBuffer = gl.createBuffer();
-    	gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexPositionBuffer);
+    	if (!vertexPositionBuffer)
+    		vertexPositionBuffer = gl.createBuffer();
+    	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
     	vertices = [
     	            -1, +1,
     	            +1, +1,
@@ -228,12 +228,12 @@ var transform = [1, 0, 0, 1, 0, 0];
     	            +1, -1,
     	            ];
     	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    	laptopScreenVertexPositionBuffer.itemSize = 2;
-    	laptopScreenVertexPositionBuffer.numItems = 4;
+    	vertexPositionBuffer.itemSize = 2;
+    	vertexPositionBuffer.numItems = 4;
 
-    	if (!laptopScreenVertexTextureCoordBuffer)
-    		laptopScreenVertexTextureCoordBuffer = gl.createBuffer();
-    	gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
+    	if (!vertexTextureCoordBuffer)
+    		vertexTextureCoordBuffer = gl.createBuffer();
+    	gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
     	var textureCoords = [
     	                     windowOffsetX/gridSizeX, 1-windowOffsetY/gridSizeY,
     	                     1-windowOffsetX/gridSizeX, 1-windowOffsetY/gridSizeY,
@@ -241,8 +241,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     	                     1-windowOffsetX/gridSizeX,   windowOffsetY/gridSizeY
     	                     ];
     	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoords), gl.STATIC_DRAW);
-    	laptopScreenVertexTextureCoordBuffer.itemSize = 2;
-    	laptopScreenVertexTextureCoordBuffer.numItems = 4;
+    	vertexTextureCoordBuffer.itemSize = 2;
+    	vertexTextureCoordBuffer.numItems = 4;
 
     	if (!sourceBuffer)
     		sourceBuffer = gl.createBuffer();
@@ -392,8 +392,8 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(srcCoords), gl.STATIC_DRAW);
         gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-//        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+//        gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
+//        gl.vertexAttribPointer(shaderProgramDraw.textureCoordAttribute, vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
         loadMatrix(pMatrix);
         setMatrixUniforms(shaderProgramDraw);
@@ -889,11 +889,11 @@ var transform = [1, 0, 0, 1, 0, 0];
         mvPushMatrix();
 
         // draw result
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgramMain.vertexPositionAttribute, laptopScreenVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProgramMain.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
         
-        gl.bindBuffer(gl.ARRAY_BUFFER, laptopScreenVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgramMain.textureCoordAttribute, laptopScreenVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexTextureCoordBuffer);
+        gl.vertexAttribPointer(shaderProgramMain.textureCoordAttribute, vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, renderTexture1.texture);
@@ -904,7 +904,7 @@ var transform = [1, 0, 0, 1, 0, 0];
         setMatrixUniforms(shaderProgramMain);
         gl.enableVertexAttribArray(shaderProgramMain.vertexPositionAttribute);
         gl.enableVertexAttribArray(shaderProgramMain.textureCoordAttribute);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, laptopScreenVertexPositionBuffer.numItems);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertexPositionBuffer.numItems);
         gl.disableVertexAttribArray(shaderProgramMain.vertexPositionAttribute);
         gl.disableVertexAttribArray(shaderProgramMain.textureCoordAttribute);
 
@@ -982,7 +982,6 @@ var transform = [1, 0, 0, 1, 0, 0];
     	initTextures();
         mat4.identity(matrix3d);
 		mat4.rotateX(matrix3d, -Math.PI/3);
-    	//loadLaptop();
 
 //    	drawWalls(renderTexture1);
 
