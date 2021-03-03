@@ -1254,7 +1254,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
 					// processing goes here
 					if (response.getStatusCode()==Response.SC_OK) {
 					String text = response.getText();
-					processSetupList(text.getBytes(), text.length());
+					processSetupList(text.getBytes(), text.getBytes().length);
 					if (startLayoutText == null)
 						doSetup();
 					else
