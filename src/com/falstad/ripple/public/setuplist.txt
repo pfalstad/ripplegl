@@ -72,3 +72,4 @@ gradient3.txt Temperature Gradient 3
 gradient4.txt Temperature Gradient 4
 reciprocity.txt Reciprocity
 rotating.txt Rotating Source
+pyramid.txt Step Pyramid Reflections
