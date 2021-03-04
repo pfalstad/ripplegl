@@ -757,6 +757,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	mainMenuBar.addItem(getClassCheckItem("Add Parabola", "Parabola"));
     	mainMenuBar.addItem(getClassCheckItem("Add Lens", "Lens"));
     	mainMenuBar.addItem(getClassCheckItem("Add Probe", "Probe"));
+    	mainMenuBar.addItem(getClassCheckItem("Add Rotating Source", "RotatingSource"));
     }
 
     MenuItem getClassCheckItem(String s, String t) {
@@ -871,6 +872,8 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     		newObject = new PhasedArraySource();
     	if (item == "MultipoleSource")
     		newObject = new MultipoleSource();
+    	if (item == "RotatingSource")
+    		newObject = new RotatingSource();
     	if (item == "Slit")
     		newObject = new Slit();
     	if (newObject != null) {
@@ -906,6 +909,7 @@ public class RippleSim implements MouseDownHandler, MouseMoveHandler,
     	if (tint == 's') return new Source(st, 1);
     	if (tint == 't') return new TrianglePrism(st);
     	if (tint == 'w') return new Wall(st);
+    	if (tint == 204) return new RotatingSource(st);
     	return null;
     }
     
