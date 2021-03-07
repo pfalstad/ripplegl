@@ -80,14 +80,14 @@ public class MultipoleSource extends Source {
 	}
 	
 	void run() {
-        double v = getValue();
-        if (enabled) {
-        	int i;
-        	for (i = 0; i != sourceCount; i++) {
-        		DragHandle dh = handles.get(i+1);
-        		RippleSim.drawSource(dh.x, dh.y, i % 2 == 0 ? v : -v);
-        	}
-        }
+	    double v = getValue();
+	    if (enabled) {
+		int i;
+		for (i = 0; i != sourceCount; i++) {
+		    DragHandle dh = handles.get(i+1);
+		    RippleSim.drawSource(dh.x, dh.y, i % 2 == 0 ? v : -v);
+		}
+	    }
 	}
     
     void rotate(double ang) {

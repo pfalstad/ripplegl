@@ -33,7 +33,15 @@ public class RotatingSource extends MultipoleSource {
 	}
 	
 	void run() {
-	    super.run();
+	    double v = getValue();
+	    if (enabled) {
+		int i;
+		for (i = 0; i != sourceCount; i++) {
+		    DragHandle dh = handles.get(i+1);
+		    // use drawPoke here because it is less noisy
+		    RippleSim.drawPoke(dh.x, dh.y, i % 2 == 0 ? v : -v);
+		}
+	    }
 	    rotate(anglePerIter);
 	}
     

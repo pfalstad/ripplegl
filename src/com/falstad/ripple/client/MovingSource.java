@@ -67,8 +67,10 @@ public class MovingSource extends Source {
         double v = getValue();
         double nstep = 1-step;
 //        sim.console("movingsrc " + v + " " + nstep + " " + dh1.x + " " + dh1.y);
+        
+        // use drawPoke here because it is less noisy
         if (enabled)
-        	RippleSim.drawSource((int)(dh1.x*nstep + dh2.x*step),
+        	RippleSim.drawPoke((int)(dh1.x*nstep + dh2.x*step),
         						 (int)(dh1.y*nstep + dh2.y*step), v); 
     }
 
