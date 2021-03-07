@@ -1,7 +1,7 @@
 # ripplegl
 Ripple Tank, webgl version
 
-##Introduction
+## Introduction
 
 RippleGL is a ripple tank simulation that runs in the browser. It was originally written by me, Paul Falstad, as a Java Applet.  Then Iain Sharp adapted one of my other applets, a circuit simulator, to run in the browser using GWT.  So I used some of his code to build a similar port of the java ripple tank to GWT.  In the process, I also converted the simulation code to WebGL, for much better performance.
 
