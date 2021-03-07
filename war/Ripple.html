@@ -72,7 +72,7 @@
 #define TS_COL_SOURCE 7
 #define TS_COL_COUNT  9
 
-    precision mediump float;
+    precision highp float;
 
     varying vec2 vTextureCoord;
     varying vec4 vPosition;
@@ -107,7 +107,7 @@
 </script>
 
 <script id="shader-draw-fs" type="x-shader/x-fragment">
-    precision mediump float;
+    precision highp float;
 
     //varying vec4 vPosition;
 	varying vec4 vColor;
@@ -135,7 +135,7 @@
 </script>
 
 <script id="shader-draw-line-fs" type="x-shader/x-fragment">
-    precision mediump float;
+    precision highp float;
 
     //varying vec4 vPosition;
 	varying vec4 vColor;
@@ -146,7 +146,7 @@
 </script>
 
 <script id="shader-mode-fs" type="x-shader/x-fragment">
-    precision mediump float;
+    precision highp float;
 
     varying vec4 vPosition;
 	varying vec4 vColor;
@@ -159,7 +159,7 @@
 
 <script id="shader-simulate-fs" type="x-shader/x-fragment">
 	// shader for running simulation
-    precision mediump float;
+    precision highp float;
 
     varying vec2 vTextureCoord;
     varying vec4 vPosition;
@@ -208,7 +208,7 @@ void main()
 </script>
 
 <script id="shader-poke-fs" type="x-shader/x-fragment">
-    precision mediump float;
+    precision highp float;
 
     varying vec2 vTextureCoord;
     varying vec4 vPosition;
