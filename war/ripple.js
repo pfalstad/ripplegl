@@ -388,7 +388,8 @@ var transform = [1, 0, 0, 1, 0, 0];
     // poke wave (draw a little cone near mouse position).
     // We want to blend this with current value of function but blending with float textures is not well supported.
     // So we use a dedicated shader.  We could just process a small area around the mouse position but that is too
-    // much hassle so we just do the entire screen.
+    // much hassle so we just do the entire screen for now.  Since we use this to draw moving sources, it would
+    // be good to optimize this in the future.
     function drawPoke(x, y, v) {
     	var rt = renderTexture1;
     	renderTexture1 = renderTexture2;
