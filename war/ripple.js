@@ -45,7 +45,7 @@ var transform = [1, 0, 0, 1, 0, 0];
     }
 
 
-    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw, shaderProgramMode;
+    var shaderProgramMain, shaderProgramFixed, shaderProgramAcoustic, shaderProgramDraw, shaderProgramMode, shaderProgramPoke;
 
     function initShader(fs, vs, prefix) {
         var fragmentShader = getShader(gl, fs, prefix);
@@ -97,6 +97,10 @@ var transform = [1, 0, 0, 1, 0, 0];
     	shaderProgramDraw = initShader("shader-draw-fs", "shader-draw-vs");
     	shaderProgramDrawLine = initShader("shader-draw-line-fs", "shader-draw-vs");
     	shaderProgramMode = initShader("shader-mode-fs", "shader-draw-vs");
+    	shaderProgramPoke = initShader("shader-poke-fs", "shader-vs");
+
+        shaderProgramPoke.pokePositionUniform = gl.getUniformLocation(shaderProgramPoke, "pokePosition");
+        shaderProgramPoke.pokeValueUniform = gl.getUniformLocation(shaderProgramPoke, "pokeValue");
     }
 
     var moonTexture;
@@ -381,6 +385,52 @@ var transform = [1, 0, 0, 1, 0, 0];
         gl.disableVertexAttribArray(prog.textureCoordAttribute);
     }
 
+    // poke wave (draw a little cone near mouse position).
+    // We want to blend this with current value of function but blending with float textures is not well supported.
+    // So we use a dedicated shader.  We could just process a small area around the mouse position but that is too
+    // much hassle so we just do the entire screen.
+    function drawPoke(x, y, v) {
+    	var rt = renderTexture1;
+    	renderTexture1 = renderTexture2;
+    	renderTexture2 = rt;
+
+    	var rttFramebuffer = renderTexture1.framebuffer;
+    	var rttTexture = renderTexture1.texture;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+
+        var prog = shaderProgramPoke;
+        gl.useProgram(prog);
+        var rttFramebuffer = renderTexture1.framebuffer;
+        gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
+
+        mat4.identity(pMatrix);
+        mat4.identity(mvMatrix);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, simVertexPositionBuffer);
+        gl.vertexAttribPointer(prog.vertexPositionAttribute, simVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, simVertexTextureCoordBuffer);
+        gl.vertexAttribPointer(prog.textureCoordAttribute, simVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.enableVertexAttribArray(prog.vertexPositionAttribute);
+        gl.enableVertexAttribArray(prog.textureCoordAttribute);
+        
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, renderTexture2.texture);
+        gl.uniform1i(prog.samplerUniform, 0);
+
+        setMatrixUniforms(prog);
+
+        // get the matrix (but don't load it into the shader) so we can transform the poke coordinates
+        loadMatrix(pMatrix);
+        gl.uniform2f(prog.pokePositionUniform, pMatrix[0]*x+pMatrix[12], pMatrix[5]*y+pMatrix[13]);
+        gl.uniform1f(prog.pokeValueUniform, v);
+
+        gl.drawArrays(gl.TRIANGLES, 0, simVertexPositionBuffer.numItems);
+        gl.disableVertexAttribArray(prog.vertexPositionAttribute);
+        gl.disableVertexAttribArray(prog.textureCoordAttribute);
+    }
+
     function drawSource(x, y, f) {
         gl.useProgram(shaderProgramDraw);
         gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, f, 0.0, 1.0, 1.0);
@@ -612,48 +662,6 @@ var transform = [1, 0, 0, 1, 0, 0];
 //        gl.lineWidth(1);
 
 		gl.colorMask(true, true, true, true);
-		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-
-    function drawPoke(x, y, v) {
-		var rttFramebuffer = renderTexture1.framebuffer;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		gl.viewport(0, 0, rttFramebuffer.width, rttFramebuffer.height);
-		gl.colorMask(true, true, false, false);
-
-        gl.useProgram(shaderProgramDraw);
-        gl.vertexAttrib4f(shaderProgramDraw.colorAttribute, 1.0, 0.0, 0.0, 1.0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, sourceBuffer);
-        var verts = [x, y];
-        var colors = [v,0,0,1];
-        var steps = 8;
-        var i;
-        var r = 6;
-        for (i = 0; i != steps+1; i++) {
-        	var ang = Math.PI*2*i/steps;
-        	verts.push(x+r*Math.cos(ang), y+r*Math.sin(ang));
-        	colors.push(0,0,0,0);
-        }
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(shaderProgramDraw.vertexPositionAttribute, sourceBuffer.itemSize, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        
-        gl.enable(gl.BLEND);
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-        gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(shaderProgramDraw.colorAttribute, 4, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shaderProgramDraw.colorAttribute);
-
-        loadMatrix(pMatrix);
-        setMatrixUniforms(shaderProgramDraw);
-        gl.drawArrays(gl.TRIANGLE_FAN, 0, 2+steps);
-        gl.disableVertexAttribArray(shaderProgramDraw.vertexPositionAttribute);
-        gl.disableVertexAttribArray(shaderProgramDraw.colorAttribute);
-
-		gl.colorMask(true, true, true, true);
-		gl.disable(gl.BLEND);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 

@@ -207,6 +207,29 @@ void main()
 
 </script>
 
+<script id="shader-poke-fs" type="x-shader/x-fragment">
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+    varying vec4 vPosition;
+    varying float vDamping;
+
+    uniform sampler2D uSampler;
+    uniform vec2 pokePosition;
+    uniform float pokeValue;
+
+void main()
+{
+    highp float newvel = 0.;
+    highp float newpos = 0.;
+    highp vec4 pv = texture2D(uSampler, vTextureCoord);
+    highp float dist = length(vPosition.xy - pokePosition);
+    highp float fade = clamp(1.0-dist/0.01, 0.0, 1.0);
+    gl_FragColor = vec4(mix(pv.r, pokeValue, fade), mix(pv.g, 0.0, fade), pv.b, 1.);
+}
+
+</script>
+
 <script id="shader-vs" type="x-shader/x-vertex">
     attribute vec3 aVertexPosition;
     attribute vec2 aTextureCoord;
